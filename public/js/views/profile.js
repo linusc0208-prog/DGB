@@ -35,7 +35,7 @@ export function openProfile({ onLogout }) {
         try {
           const data = await rpc('export_my_data');
           const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-          const a = Object.assign(document.createElement('a'), { href: url, download: 'parkradar-daten.json' });
+          const a = Object.assign(document.createElement('a'), { href: url, download: 'dont-get-busted-daten.json' });
           document.body.append(a); a.click(); a.remove();
           setTimeout(() => URL.revokeObjectURL(url), 5000);
         } catch (e) { toast(e.message, { type: 'err' }); }

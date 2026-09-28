@@ -65,5 +65,5 @@ fs.writeFileSync(path.join(PUB, 'config.js'),
   `// Automatisch erzeugt von scripts/build.mjs – nicht von Hand bearbeiten\nwindow.PARKRADAR_CONFIG = ${JSON.stringify(config, null, 2)};\n`);
 
 const missing = [!url && 'SUPABASE_URL', !key && 'SUPABASE_PUBLISHABLE_KEY', !config.vapidPublicKey && 'VAPID_PUBLIC_KEY'].filter(Boolean);
-console.log('✔ ParkRadar gebaut (public/)');
+console.log('✔ Don’t get busted gebaut (public/)');
 if (missing.length) console.warn(`⚠ Noch nicht gesetzt: ${missing.join(', ')} – siehe Anleitung.`);

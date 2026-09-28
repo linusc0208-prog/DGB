@@ -1,10 +1,10 @@
-# 🅿️ ParkRadar
+# 🅿️ Don’t get busted
 
-**Ordnungsamt gesehen? Ein Tipp, und alle in der Nähe sind gewarnt. Der Parkschein geht direkt über EasyPark.**
+**Parkkontrolle gesehen? Ein Tipp, und alle in der Nähe sind gewarnt. Der Parkschein geht direkt über EasyPark.**
 
 Technik: **Supabase** (Datenbank, Login, Live-Updates, Push-Funktion, Zeitsteuerung) · **Vercel** (liefert die App aus) · **GitHub** (Code, automatische Veröffentlichung).
 
-> Die ausführliche Schritt-für-Schritt-Anleitung liegt als eigenes Dokument vor („ParkRadar online bringen“). Hier die Kurzfassung.
+> Die ausführliche Schritt-für-Schritt-Anleitung liegt als eigenes Dokument vor („Don’t get busted online bringen“). Hier die Kurzfassung.
 
 ## Einrichtung in Kürze
 
@@ -47,7 +47,7 @@ test/                                 Tests der Datenbank-Logik
 
 ## EasyPark
 
-EasyPark hat keine öffentliche API zum Starten von Parkvorgängen. ParkRadar öffnet deshalb die EasyPark-App (Android: Paket `net.easypark.android`, iOS: URL-Schema mit App-Store-Fallback). Countdown und Erinnerung in ParkRadar sind eine Komfortfunktion; maßgeblich ist der Status in EasyPark.
+EasyPark hat keine öffentliche API zum Starten von Parkvorgängen. Don’t get busted öffnet deshalb die EasyPark-App (Android: Paket `net.easypark.android`, iOS: URL-Schema mit App-Store-Fallback). Countdown und Erinnerung in Don’t get busted sind eine Komfortfunktion; maßgeblich ist der Status in EasyPark.
 
 ## Vor dem Livegang
 

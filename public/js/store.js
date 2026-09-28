@@ -5,7 +5,7 @@ export const state = {
   user: null,
   authUser: null,        // Supabase-Auth-Nutzer (E-Mail usw.)
   pos: null,            // { lat, lng, accuracy, speed, ts } – bleibt auf dem Gerät
-  geoStatus: 'idle',    // idle | watching | denied | unavailable
+  geoStatus: 'idle',    // idle | locating | watching | denied | unavailable
   driving: false,
   passengerUntil: 0,
   reports: new Map(),   // id -> Meldung

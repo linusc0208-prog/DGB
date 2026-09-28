@@ -48,7 +48,7 @@ export function icon(name, cls = '') {
 }
 
 export const KIND = {
-  patrol: { label: 'Ordnungsamt', icon: 'siren' },
+  patrol: { label: 'Kontrolle', icon: 'siren' },
   foot: { label: 'Fußstreife', icon: 'foot' },
   car: { label: 'Fahrzeug', icon: 'car' },
   tow: { label: 'Abschlepp\u00ADwagen', icon: 'tow' },

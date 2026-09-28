@@ -98,7 +98,7 @@ function body() {
 
   if (!car) {
     return `
-      <p class="muted" style="margin:0 0 16px">Speichere, wo du parkst – wir warnen dich, sobald das Ordnungsamt in die Nähe kommt.</p>
+      <p class="muted" style="margin:0 0 16px">Speichere, wo du parkst – wir warnen dich, sobald eine Kontrolle in die Nähe kommt.</p>
       <button class="btn primary block" data-here style="min-height:56px;font-size:16px">${icon('pin')} Hier geparkt</button>
       ${s ? `<div style="margin-top:12px">${sessionHtml(s)}</div>` : `<div style="margin-top:10px">${parkBtn}</div>`}
       ${radiusSeg}`;

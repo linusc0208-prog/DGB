@@ -7,7 +7,7 @@ import { registerSW } from './push.js';
 import { connectRealtime, disconnectRealtime } from './realtime.js';
 import { loadReports, loadCar, loadSession, loadProvider, pruneReports, saveCar, nearestReport, loadMe, fetchReport } from './actions.js';
 import { prefetchStreet } from './geocode.js';
-import { $, icon, initials, toast, closeAllSheets, fmtDist } from './ui.js';
+import { $, icon, initials, toast, closeAllSheets, fmtDist, openSheet } from './ui.js';
 import { initAuth, showAuth, openNewPassword } from './views/auth.js';
 import { quickReport, openReportDetail } from './views/report.js';
 import { openCarSheet, promptHandoff } from './views/car.js';
@@ -95,10 +95,10 @@ function setup() {
   $('#avatar-btn').onclick = () => openProfile({ onLogout: () => logout() });
   $('#btn-locate').onclick = () => {
     if (state.pos) mapx.flyTo(state.pos, 16);
-    else requestPosition().then((p) => mapx.flyTo(p, 16)).catch((e) => toast(e.message, { type: 'err', duration: 6000 }));
+    else locateMe();
   };
   $('#status-btn').onclick = () => {
-    if (!state.pos) { requestPosition().catch((e) => toast(e.message, { type: 'err', duration: 6000 })); return; }
+    if (!state.pos) { locateMe(); return; }
     const n = nearestReport(state.pos);
     if (n) openReportDetail(n.id); else mapx.flyTo(state.pos, 16);
   };
@@ -146,13 +146,46 @@ function setup() {
   }
 }
 
+function locateMe() {
+  if (state.geoStatus === 'denied') { openLocationHelp(true); return; }
+  if (state.geoStatus === 'locating') { toast('Dein Standort wird gerade gesucht …', { duration: 2500 }); return; }
+  requestPosition().then((p) => mapx.flyTo(p, 16)).catch(() => openLocationHelp(state.geoStatus === 'denied'));
+}
+
+function openLocationHelp(denied) {
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const android = /Android/.test(ua);
+  const device = ios
+    ? '<b>iPhone:</b> Einstellungen → Datenschutz &amp; Sicherheit → <b>Ortungsdienste</b> an. Weiter unten bei <b>Safari-Websites</b> „Beim Verwenden der App“ wählen.'
+    : android
+      ? '<b>Android:</b> In den Schnelleinstellungen <b>Standort</b> einschalten. In Chrome: Einstellungen → Website-Einstellungen → Standort.'
+      : '<b>Windows:</b> Einstellungen → Datenschutz und Sicherheit → <b>Standort</b>. Dort „Standortdienste“ und „Desktop-Apps Zugriff auf Ihren Standort erlauben“ einschalten.';
+  openSheet({
+    title: denied ? 'Standort ist blockiert' : 'Standort nicht gefunden',
+    body: `<p class="muted" style="margin:0 0 12px">${denied
+      ? 'Dein Browser lässt die App deinen Standort nicht sehen. So schaltest du ihn frei:'
+      : 'Dein Gerät hat keinen Standort geliefert. Meist liegt es an einer dieser Einstellungen:'}</p>
+      <ol style="margin:0 0 16px;padding-left:20px;line-height:1.5">
+        <li style="margin-bottom:8px"><b>Im Browser:</b> Links neben der Adresse auf das <b>Schloss-Symbol</b> tippen → <b>Standort</b> → <b>Zulassen</b>.</li>
+        <li style="margin-bottom:8px">${device}</li>
+        <li>Danach die Seite <b>neu laden</b>.</li>
+      </ol>
+      <button class="btn primary block" data-retry>Nochmal versuchen</button>`,
+    onMount(el, sheet) {
+      $('[data-retry]', el).onclick = () => { sheet.close(); location.reload(); };
+    },
+  });
+}
+
 function updateStatus() {
   const title = $('#status-title');
   const sub = $('#status-sub');
-  if (!state.online) { title.textContent = 'ParkRadar'; sub.innerHTML = '<span class="dot off"></span>Verbinde…'; return; }
+  if (!state.online) { title.textContent = 'Don’t get busted'; sub.innerHTML = '<span class="dot off"></span>Verbinde…'; return; }
   if (!state.pos) {
-    title.textContent = 'Standort freigeben';
-    sub.innerHTML = '<span class="dot off"></span>Tippe hier, um Meldungen um dich zu sehen';
+    const g = state.geoStatus;
+    title.textContent = g === 'locating' ? 'Suche deinen Standort…' : g === 'denied' ? 'Standort blockiert' : g === 'unavailable' ? 'Standort nicht gefunden' : 'Standort freigeben';
+    sub.innerHTML = `<span class="dot off"></span>${g === 'locating' ? 'Einen Moment' : g === 'denied' || g === 'unavailable' ? 'Tippe hier für Hilfe' : 'Tippe hier, um Meldungen um dich zu sehen'}`;
     return;
   }
   const near = [...state.reports.values()].filter((r) => !r.isMine).map((r) => ({ r, d: mapxDistance(state.pos, r) })).filter((x) => x.d <= 1000);

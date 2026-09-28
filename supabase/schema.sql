@@ -1,5 +1,5 @@
 -- =====================================================================
---  ParkRadar – Datenbank für Supabase
+--  Don’t get busted – Datenbank für Supabase
 --  Komplett in den SQL Editor kopieren und auf "Run" klicken.
 --  Das Skript kann gefahrlos mehrmals ausgeführt werden (z. B. nach Updates).
 -- =====================================================================
@@ -215,7 +215,7 @@ begin
   select * into r from public.reports where id = p_report_id;
   if not found or r.status <> 'active' then return 0; end if;
   select user_id into author from public.report_authors where report_id = r.id;
-  label := case r.kind when 'foot' then 'Fußstreife' when 'car' then 'Fahrzeug' when 'tow' then 'Abschleppwagen' else 'Ordnungsamt' end;
+  label := case r.kind when 'foot' then 'Fußstreife' when 'car' then 'Fahrzeug' when 'tow' then 'Abschleppwagen' else 'Kontrolle' end;
   for c in
     select cars.*, p.alert_radius from public.cars
     join public.profiles p on p.id = cars.user_id

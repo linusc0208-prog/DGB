@@ -1,4 +1,4 @@
-// Nachbau der für ParkRadar relevanten Supabase-Umgebung auf einer echten Postgres-Engine (PGlite),
+// Nachbau der für Don’t get busted relevanten Supabase-Umgebung auf einer echten Postgres-Engine (PGlite),
 // damit schema.sql ohne Supabase-Konto getestet werden kann.
 import fs from 'node:fs';
 import path from 'node:path';

@@ -1,5 +1,5 @@
-// ParkRadar Service Worker: App-Shell-Cache, Web-Push, Klick auf Benachrichtigungen
-const VERSION = 'pr-v2.1.0';
+// Don’t get busted Service Worker: App-Shell-Cache, Web-Push, Klick auf Benachrichtigungen
+const VERSION = 'pr-v2.2.0';
 const SHELL = [
   '/',
   '/css/app.css',
@@ -50,7 +50,7 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('push', (event) => {
   let payload = {};
-  try { payload = event.data ? event.data.json() : {}; } catch { payload = { title: 'ParkRadar', body: event.data?.text() }; }
+  try { payload = event.data ? event.data.json() : {}; } catch { payload = { title: 'Don’t get busted', body: event.data?.text() }; }
   event.waitUntil((async () => {
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const visible = clients.find((c) => c.visibilityState === 'visible' && c.focused);
@@ -59,7 +59,7 @@ self.addEventListener('push', (event) => {
       visible.postMessage({ type: 'push', payload });
       return;
     }
-    await self.registration.showNotification(payload.title || 'ParkRadar', {
+    await self.registration.showNotification(payload.title || 'Don’t get busted', {
       body: payload.body || '',
       tag: payload.tag,
       renotify: true,

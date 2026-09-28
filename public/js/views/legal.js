@@ -5,17 +5,17 @@ const TEXTS = {
     title: 'Nutzungshinweise',
     body: `
       <h4>Sicherheit geht vor</h4>
-      <p>Bediene ParkRadar <b>niemals während der Fahrt</b>. Fahrern ist die Nutzung von Warnfunktionen für Verkehrsüberwachung während der Fahrt nach § 23 Abs. 1c StVO untersagt. ParkRadar erkennt Fahrten und pausiert Melden und Warnungen automatisch.</p>
+      <p>Bediene die App <b>niemals während der Fahrt</b>. Fahrern ist die Nutzung von Warnfunktionen für Verkehrsüberwachung während der Fahrt nach § 23 Abs. 1c StVO untersagt. Die App erkennt Fahrten und pausiert Melden und Warnungen automatisch.</p>
       <h4>Fair melden</h4>
       <ul>
         <li>Melde nur, was du selbst gerade siehst.</li>
-        <li>Das Ordnungsamt macht seinen Job – ParkRadar soll nur helfen, rechtzeitig einen Parkschein zu lösen.</li>
+        <li>Wer kontrolliert, macht seinen Job – die App soll nur helfen, rechtzeitig einen Parkschein zu lösen.</li>
         <li>Falschmeldungen werden von anderen widerlegt und senken deinen Vertrauenswert; wiederholter Missbrauch führt zur Sperre.</li>
       </ul>
       <h4>Ohne Gewähr</h4>
       <p>Meldungen stammen aus der Community und können unvollständig oder falsch sein. Eine fehlende Meldung bedeutet nicht, dass nicht kontrolliert wird. Parke immer regelkonform.</p>
       <h4>EasyPark</h4>
-      <p>Parkvorgänge werden über die EasyPark-App abgewickelt und dort abgerechnet. Es gelten die Bedingungen von EasyPark. ParkRadar öffnet nur die EasyPark-App und zeigt Countdown und Erinnerung als Komfortfunktion – maßgeblich ist der Status in der EasyPark-App.</p>`,
+      <p>Parkvorgänge werden über die EasyPark-App abgewickelt und dort abgerechnet. Es gelten die Bedingungen von EasyPark. Die App öffnet nur die EasyPark-App und zeigt Countdown und Erinnerung als Komfortfunktion – maßgeblich ist der Status in der EasyPark-App.</p>`,
   },
   privacy: {
     title: 'Datenschutz',
@@ -45,7 +45,7 @@ const TEXTS = {
     body: `
       <p><i>Vor der Veröffentlichung ausfüllen (Pflicht nach § 5 DDG).</i></p>
       <p>[Name / Firma]<br>[Straße Hausnummer]<br>[PLZ Ort]<br>E-Mail: [kontakt@…]</p>
-      <p>ParkRadar ist ein unabhängiges Angebot und steht in keiner Verbindung zu Ordnungsbehörden. „EasyPark“ ist eine Marke der EasyPark Group.</p>`,
+      <p>Don’t get busted ist ein unabhängiges Angebot und steht in keiner Verbindung zu Ordnungsbehörden. „EasyPark“ ist eine Marke der EasyPark Group.</p>`,
   },
 };
 

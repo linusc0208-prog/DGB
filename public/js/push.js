@@ -34,7 +34,7 @@ export async function pushStatus() {
 }
 
 export async function enablePush() {
-  if (!pushSupported()) throw new Error(isIOS() ? 'Auf dem iPhone: Teilen → „Zum Home-Bildschirm“, dann ParkRadar von dort öffnen.' : 'Dein Browser unterstützt keine Push-Benachrichtigungen.');
+  if (!pushSupported()) throw new Error(isIOS() ? 'Auf dem iPhone: Teilen → „Zum Home-Bildschirm“, dann Don’t get busted von dort öffnen.' : 'Dein Browser unterstützt keine Push-Benachrichtigungen.');
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') throw new Error('Benachrichtigungen wurden nicht erlaubt.');
   const reg = registration || (await navigator.serviceWorker.ready);

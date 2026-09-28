@@ -8,7 +8,7 @@ import { openReportDetail } from './report.js';
 
 const shown = new Set();
 
-/** Großer Alarm: Ordnungsamt in der Nähe des eigenen Autos */
+/** Großer Alarm: Kontrolle in der Nähe des eigenen Autos */
 export function showCarAlert(p) {
   if (shown.has(p.tag)) return;
   shown.add(p.tag);

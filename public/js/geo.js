@@ -44,12 +44,19 @@ function onPosition(pos) {
 }
 
 function onError(err) {
+  // Kurze Aussetzer egal, solange wir schon eine Position haben
+  if (err.code !== 1 && state.pos) return;
   setState({ geoStatus: err.code === 1 ? 'denied' : 'unavailable' });
 }
+
+const once = (opts) => new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, opts));
 
 export function startGeo() {
   if (!('geolocation' in navigator)) { setState({ geoStatus: 'unavailable' }); return; }
   if (watchId != null) return;
+  if (!state.pos) setState({ geoStatus: 'locating' });
+  // Schnelle, grobe Position zuerst (WLAN/Mobilfunk) – wichtig für Laptops ohne GPS
+  once({ enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }).then(onPosition).catch(() => {});
   watchId = navigator.geolocation.watchPosition(onPosition, onError, {
     enableHighAccuracy: true,
     maximumAge: 5000,
@@ -58,15 +65,24 @@ export function startGeo() {
 }
 
 /** Einmalige Positionsabfrage (z. B. nach Klick auf "Standort freigeben") */
-export function requestPosition() {
-  return new Promise((resolve, reject) => {
-    if (!('geolocation' in navigator)) return reject(new Error('Dein Browser unterstützt keine Standortabfrage.'));
-    navigator.geolocation.getCurrentPosition(
-      (p) => { onPosition(p); startGeo(); resolve(state.pos); },
-      (e) => { onError(e); reject(new Error(e.code === 1 ? 'Standortzugriff wurde verweigert. Bitte in den Browser-Einstellungen erlauben.' : 'Standort konnte nicht ermittelt werden.')); },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
-    );
-  });
+export async function requestPosition() {
+  if (!('geolocation' in navigator)) throw new Error('Dein Browser unterstützt keine Standortabfrage.');
+  setState({ geoStatus: 'locating' });
+  let pos;
+  try {
+    pos = await once({ enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+  } catch (e) {
+    if (e.code === 1) { onError(e); throw new Error('Standortzugriff ist blockiert.'); }
+    try {
+      pos = await once({ enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+    } catch (e2) {
+      onError(e2);
+      throw new Error(e2.code === 1 ? 'Standortzugriff ist blockiert.' : 'Standort konnte nicht ermittelt werden.');
+    }
+  }
+  onPosition(pos);
+  if (watchId == null) startGeo();
+  return state.pos;
 }
 
 export function setPassenger() {

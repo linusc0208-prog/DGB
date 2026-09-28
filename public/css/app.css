@@ -1,4 +1,4 @@
-/* ============ ParkRadar – schlankes Design-System ============ */
+/* ============ Don’t get busted – schlankes Design-System ============ */
 :root {
   --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --safe-top: env(safe-area-inset-top, 0px);

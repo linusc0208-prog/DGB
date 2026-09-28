@@ -1,4 +1,4 @@
-// ParkRadar – Edge Function "send-push"
+// Don’t get busted – Edge Function "send-push"
 // Wird von der Datenbank aufgerufen, sobald eine Benachrichtigung entsteht (Tabelle outbox),
 // und schickt sie per Web-Push an alle Geräte des Nutzers.
 //

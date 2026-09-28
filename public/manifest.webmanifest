@@ -1,7 +1,7 @@
 {
-  "name": "ParkRadar – Ordnungsamt in der Nähe?",
-  "short_name": "ParkRadar",
-  "description": "Ordnungsamt gesehen? Ein Tipp – alle in der Nähe sind gewarnt. Parkschein direkt über EasyPark.",
+  "name": "Don’t get busted – Kontrolle in der Nähe?",
+  "short_name": "Don’t get busted",
+  "description": "Parkkontrolle gesehen? Ein Tipp – alle in der Nähe sind gewarnt. Parkschein direkt über EasyPark.",
   "lang": "de",
   "start_url": "/?source=pwa",
   "scope": "/",

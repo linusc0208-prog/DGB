@@ -5,7 +5,7 @@ export const cfg = window.PARKRADAR_CONFIG || {};
 
 if (!cfg.supabaseUrl || !cfg.supabaseKey || !window.supabase) {
   document.body.innerHTML = `<div style="font-family:system-ui;padding:32px;max-width:520px;margin:auto">
-    <h2>ParkRadar ist noch nicht verbunden</h2>
+    <h2>Don’t get busted ist noch nicht verbunden</h2>
     <p>Es fehlen die Supabase-Zugangsdaten. Trage <b>SUPABASE_URL</b> und <b>SUPABASE_PUBLISHABLE_KEY</b>
     bei Vercel unter <i>Settings → Environment Variables</i> ein (lokal: in der Datei <code>.env</code>) und veröffentliche neu.</p></div>`;
   throw new Error('Supabase-Konfiguration fehlt');
