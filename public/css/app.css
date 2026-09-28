@@ -133,6 +133,7 @@ svg.i.lg { width: 26px; height: 26px; }
 /* ---------- App ---------- */
 .app { position: fixed; inset: 0; }
 #map { position: absolute; inset: 0; z-index: 0; background: var(--surface-2); }
+#map.dark-tiles .leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
 .leaflet-container { font-family: var(--font); background: var(--surface-2); }
 .leaflet-control-attribution { font-size: 10px !important; }
 .leaflet-bottom.leaflet-right { bottom: calc(92px + var(--safe-bottom)); }

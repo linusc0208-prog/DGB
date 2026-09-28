@@ -10,7 +10,18 @@ const PUB = path.join(ROOT, 'public');
 try { process.loadEnvFile?.(path.join(ROOT, '.env')); } catch { /* keine .env */ }
 const env = process.env;
 
-const url = (env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/\/$/, '');
+let url = (env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+// Nachsichtig: nur die Projekt-ID oder ohne https:// eingetragen → vollständige Adresse daraus machen
+if (/^[a-z0-9]{15,30}$/.test(url)) url = `https://${url}.supabase.co`;
+else if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`;
+url = url.replace(/\/(rest|auth)\/v1.*$/, '');
+if (url) {
+  try { new URL(url); } catch {
+    console.error(`\n✖ SUPABASE_URL ist keine gültige Adresse: "${url}"`);
+    console.error('  Richtig ist z. B. https://abcdefghijkl.supabase.co\n');
+    process.exit(1);
+  }
+}
 const key = (env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY
   || env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
 
@@ -34,6 +45,12 @@ const copy = (from, to) => fs.cpSync(path.join(ROOT, from), path.join(PUB, to), 
 fs.mkdirSync(path.join(PUB, 'vendor'), { recursive: true });
 copy('node_modules/leaflet/dist', 'vendor/leaflet');
 copy('node_modules/@supabase/supabase-js/dist/umd/supabase.js', 'vendor/supabase.js');
+// Karte: MapLibre (CSP-Variante mit eigener Worker-Datei) + Brücke zu Leaflet
+fs.mkdirSync(path.join(PUB, 'vendor/maplibre'), { recursive: true });
+copy('node_modules/maplibre-gl/dist/maplibre-gl-csp.js', 'vendor/maplibre/maplibre-gl.js');
+copy('node_modules/maplibre-gl/dist/maplibre-gl-csp-worker.js', 'vendor/maplibre/maplibre-gl-worker.js');
+copy('node_modules/maplibre-gl/dist/maplibre-gl.css', 'vendor/maplibre/maplibre-gl.css');
+copy('node_modules/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js', 'vendor/maplibre/leaflet-maplibre-gl.js');
 
 const config = {
   supabaseUrl: url,

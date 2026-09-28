@@ -1,5 +1,5 @@
 // ParkRadar Service Worker: App-Shell-Cache, Web-Push, Klick auf Benachrichtigungen
-const VERSION = 'pr-v2.0.0';
+const VERSION = 'pr-v2.1.0';
 const SHELL = [
   '/',
   '/css/app.css',
@@ -8,6 +8,7 @@ const SHELL = [
   '/js/views/auth.js', '/js/views/report.js', '/js/views/car.js', '/js/views/profile.js',
   '/js/views/onboarding.js', '/js/views/alerts.js', '/js/views/legal.js',
   '/vendor/leaflet/leaflet.css', '/vendor/leaflet/leaflet.js', '/vendor/supabase.js',
+  '/vendor/maplibre/maplibre-gl.css', '/vendor/maplibre/maplibre-gl.js', '/vendor/maplibre/maplibre-gl-worker.js', '/vendor/maplibre/leaflet-maplibre-gl.js',
   '/icons/logo.svg', '/icons/icon-192.png', '/manifest.webmanifest',
 ];
 

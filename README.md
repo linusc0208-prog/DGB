@@ -32,7 +32,7 @@ Danach veröffentlicht jede Änderung auf GitHub die App automatisch neu.
 ```
 supabase/schema.sql                   Tabellen, Zugriffsregeln (RLS), Funktionen, Taktgeber (pg_cron), Push-Auslöser (pg_net)
 supabase/functions/send-push/index.ts Edge Function: verschickt Web-Push an die Geräte eines Nutzers
-public/                               Die App (HTML, CSS, JavaScript ohne Build-Schritt, Karte mit Leaflet)
+public/                               Die App (HTML, CSS, JavaScript ohne Build-Schritt, Karte mit Leaflet + MapLibre/OpenFreeMap)
 public/js/sb.js                       Verbindung zu Supabase, Umwandlung der Daten
 scripts/build.mjs                     Kopiert Bibliotheken, schreibt public/config.js aus den Umgebungsvariablen
 vercel.json                           Build-Einstellungen und Sicherheits-Header für Vercel
@@ -55,5 +55,5 @@ EasyPark hat keine öffentliche API zum Starten von Parkvorgängen. ParkRadar ö
 - [ ] Bezahlte Tarife: Supabase (kostenlose Projekte pausieren nach 7 Tagen wenig Aktivität), Vercel Pro (Hobby ist nur für nicht-kommerzielle Projekte)
 - [ ] Datenschutzerklärung und Impressum ausfüllen (`public/js/views/legal.js`)
 - [ ] Rechtliche Prüfung (StVO § 23 Abs. 1c, Nennung der Marke EasyPark)
-- [ ] Kartenkacheln: Nutzungsbedingungen von CARTO prüfen oder auf einen Anbieter mit Vertrag wechseln
+- [ ] Karte: kommt von OpenFreeMap (ohne Key, ohne Limit, kommerziell erlaubt). Für eine Verfügbarkeitsgarantie später selbst hosten oder einen Anbieter mit Vertrag nehmen
 - [ ] Straßennamen: Nominatim erlaubt höchstens 1 Anfrage pro Sekunde über alle Nutzer. Bei vielen Nutzern eigenen Geodienst verwenden (`GEOCODER_URL` setzen und die Domain in `vercel.json` unter `connect-src` ergänzen)

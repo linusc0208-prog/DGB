@@ -33,6 +33,8 @@ const TEXTS = {
       <p>Deinen laufenden Standort. Er wird nur auf deinem Gerät verarbeitet, um die Karte zu zentrieren und Entfernungen zu berechnen.</p>
       <h4>Wo die Daten liegen</h4>
       <p>Datenbank und Login laufen bei Supabase, die App selbst wird über Vercel ausgeliefert. [Serverstandort/Region und Auftragsverarbeitungsverträge vor dem Livegang eintragen.]</p>
+      <h4>Karte</h4>
+      <p>Die Kartenbilder lädt dein Gerät direkt von OpenFreeMap (Kartendaten © OpenStreetMap-Mitwirkende). Dabei wird – technisch bedingt – die IP-Adresse deines Geräts übermittelt, aber kein Standort und kein Konto.</p>
       <h4>Straßennamen</h4>
       <p>Um den Straßennamen anzuzeigen, fragt dein Gerät beim Geodienst Nominatim der OpenStreetMap Foundation nach. Dabei werden die Koordinate und – technisch bedingt – die IP-Adresse deines Geräts übermittelt.</p>
       <h4>Deine Rechte</h4>
