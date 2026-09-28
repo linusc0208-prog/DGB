@@ -1,0 +1,6 @@
+node_modules
+.env
+public/vendor
+public/config.js
+supabase/.temp
+.vercel
