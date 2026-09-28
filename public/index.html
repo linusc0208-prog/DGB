@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <title>ParkRadar – Ordnungsamt in der Nähe?</title>
+  <meta name="description" content="Ordnungsamt gesehen? Ein Tipp – alle in der Nähe sind gewarnt. Parkschein direkt über EasyPark." />
+  <meta name="theme-color" content="#0b0c16" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f4f5fb" media="(prefers-color-scheme: light)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ParkRadar" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icons/logo.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css" />
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <div id="splash"><img src="/icons/logo.svg" alt="" /></div>
+
+  <!-- Anmeldung -->
+  <section id="auth" class="auth hidden" aria-label="Anmeldung">
+    <div class="auth-card">
+      <div class="brand"><img src="/icons/logo.svg" alt="" /><b>ParkRadar</b></div>
+      <h1>Nie wieder <em>Knöllchen.</em></h1>
+      <p class="lead">Ordnungsamt gesehen? Ein Tipp – alle in der Nähe sind gewarnt. Und dein Parkschein ist in Sekunden gelöst.</p>
+      <div class="auth-box">
+        <div class="seg" role="tablist">
+          <button type="button" class="on" data-auth-mode="login">Anmelden</button>
+          <button type="button" data-auth-mode="register">Registrieren</button>
+        </div>
+        <form id="auth-form" novalidate>
+          <label class="field register-only hidden"><span>Vorname</span>
+            <input name="name" autocomplete="given-name" placeholder="Wie sollen wir dich nennen?" maxlength="40" />
+          </label>
+          <label class="field"><span>E-Mail</span>
+            <input name="email" type="email" autocomplete="email" inputmode="email" placeholder="du@beispiel.de" />
+          </label>
+          <label class="field"><span>Passwort</span>
+            <div class="pw-wrap">
+              <input name="password" type="password" autocomplete="current-password" placeholder="Mindestens 8 Zeichen" />
+              <button type="button" id="pw-toggle" aria-label="Passwort anzeigen"></button>
+            </div>
+          </label>
+          <label class="check register-only hidden">
+            <input type="checkbox" name="acceptTerms" />
+            <span>Ich akzeptiere die <a href="#" data-legal="terms">Nutzungshinweise</a> und den <a href="#" data-legal="privacy">Datenschutzhinweis</a>.</span>
+          </label>
+          <button type="button" class="linkish login-only" id="forgot-btn">Passwort vergessen?</button>
+          <p class="error-text" id="auth-error" role="alert"></p>
+          <div class="auth-info hidden" id="auth-info" role="status"></div>
+          <button class="btn primary block" type="submit" id="auth-submit">Anmelden</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- App: ein einziger Bildschirm -->
+  <main id="app" class="app hidden">
+    <div id="map" aria-label="Karte"></div>
+
+    <div class="top">
+      <div class="status glass">
+        <img src="/icons/logo.svg" alt="" />
+        <button class="t" id="status-btn"><b id="status-title">ParkRadar</b><small id="status-sub">Verbinde…</small></button>
+        <button class="avatar" id="avatar-btn" aria-label="Profil"></button>
+      </div>
+      <div id="drive-bar"></div>
+      <div id="car-bar"></div>
+    </div>
+
+    <button class="locate glass" id="btn-locate" aria-label="Zu meinem Standort"></button>
+
+    <div id="after-slot"></div>
+
+    <div class="bottom">
+      <button class="carbtn glass" id="btn-car" aria-label="Mein Auto"></button>
+      <button class="report" id="btn-report"><span class="ring" id="report-icon"></span><span>Ordnungsamt melden</span></button>
+    </div>
+  </main>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script src="/vendor/supabase.js"></script>
+  <script src="/config.js"></script>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

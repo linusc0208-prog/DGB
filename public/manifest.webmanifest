@@ -1,0 +1,22 @@
+{
+  "name": "ParkRadar – Ordnungsamt in der Nähe?",
+  "short_name": "ParkRadar",
+  "description": "Ordnungsamt gesehen? Ein Tipp – alle in der Nähe sind gewarnt. Parkschein direkt über EasyPark.",
+  "lang": "de",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0c16",
+  "theme_color": "#0b0c16",
+  "categories": ["navigation", "travel", "utilities"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/logo.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "shortcuts": [
+    { "name": "Mein Auto & Parkschein", "url": "/?car=1", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
