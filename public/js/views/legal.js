@@ -2,20 +2,29 @@ import { openSheet } from '../ui.js';
 
 const TEXTS = {
   terms: {
-    title: 'Nutzungshinweise',
+    title: 'Nutzungsbedingungen',
     body: `
+      <h4>Wofür ParkCheck da ist</h4>
+      <p>ParkCheck erinnert dich daran, deinen Parkschein <b>rechtzeitig zu lösen und zu verlängern</b>. Hinweise aus der Community und die Straßen-Info sollen dir helfen, die Parkregeln im Blick zu behalten. ParkCheck ist <b>nicht dafür gedacht, Kontrollen zu umgehen oder Parkgebühren zu vermeiden</b>.</p>
+      <h4>Du hältst dich an die Parkregeln</h4>
+      <ul>
+        <li>Mit der Nutzung verpflichtest du dich, die geltenden <b>Park- und Verkehrsregeln einzuhalten</b> und Parkgebühren zu bezahlen – unabhängig davon, was die App anzeigt.</li>
+        <li>Prüfe vor Ort die Beschilderung und den Parkscheinautomaten. Die App ersetzt diesen Blick nicht.</li>
+        <li>Keine Meldung in der App heißt nicht, dass Parken ohne Parkschein erlaubt ist oder dass hier keine Tickets vergeben werden.</li>
+        <li>Die App darf nicht genutzt werden, um Parkgebühren gezielt zu vermeiden.</li>
+      </ul>
       <h4>Sicherheit geht vor</h4>
-      <p>Bediene die App <b>niemals während der Fahrt</b>. Fahrern ist die Nutzung von Warnfunktionen für Verkehrsüberwachung während der Fahrt nach § 23 Abs. 1c StVO untersagt. Die App erkennt Fahrten und pausiert Melden und Warnungen automatisch.</p>
+      <p>Bediene die App <b>niemals während der Fahrt</b>. Das Handy zu bedienen ist Fahrern während der Fahrt nach § 23 Abs. 1a StVO untersagt. Die App erkennt Fahrten und pausiert Melden und Hinweise automatisch.</p>
       <h4>Fair melden</h4>
       <ul>
-        <li>Melde nur, was du selbst gerade siehst.</li>
-        <li>Wer kontrolliert, macht seinen Job – die App soll nur helfen, rechtzeitig einen Parkschein zu lösen.</li>
-        <li>Falschmeldungen werden von anderen widerlegt und senken deinen Vertrauenswert; wiederholter Missbrauch führt zur Sperre.</li>
+        <li>Melde nur Tickets, die du selbst gesehen hast – zum Beispiel einen Strafzettel an einem Auto oder ein abgeschlepptes Fahrzeug.</li>
+        <li>Keine Angaben zu Personen, Kennzeichen oder Fotos.</li>
+        <li>Falschmeldungen werden von anderen markiert und senken deinen Vertrauenswert; wiederholter Missbrauch führt zur Sperre.</li>
       </ul>
       <h4>Ohne Gewähr</h4>
-      <p>Meldungen stammen aus der Community und können unvollständig oder falsch sein. Eine fehlende Meldung bedeutet nicht, dass nicht kontrolliert wird. Parke immer regelkonform.</p>
+      <p>Meldungen stammen aus der Community und können unvollständig oder falsch sein. Erinnerungen und Countdown sind eine Komfortfunktion; für die Gültigkeit deines Parkscheins bist du selbst verantwortlich.</p>
       <h4>EasyPark</h4>
-      <p>Parkvorgänge werden über die EasyPark-App abgewickelt und dort abgerechnet. Es gelten die Bedingungen von EasyPark. Die App öffnet nur die EasyPark-App und zeigt Countdown und Erinnerung als Komfortfunktion – maßgeblich ist der Status in der EasyPark-App.</p>`,
+      <p>Parkvorgänge werden über die EasyPark-App abgewickelt und dort abgerechnet. Es gelten die Bedingungen von EasyPark. ParkCheck öffnet nur die EasyPark-App und zeigt Countdown und Erinnerung als Komfortfunktion – maßgeblich ist der Status in der EasyPark-App.</p>`,
   },
   privacy: {
     title: 'Datenschutz',
@@ -23,9 +32,10 @@ const TEXTS = {
       <p><i>Kurzfassung – vor dem Livegang durch eine vollständige, geprüfte Datenschutzerklärung ersetzen.</i></p>
       <h4>Was wir speichern</h4>
       <ul>
-        <li><b>Konto:</b> Vorname, E-Mail, Passwort (nur als sicherer Hash), Warnradius.</li>
+        <li><b>Konto:</b> Vorname, E-Mail, Passwort (nur als sicherer Hash), Hinweis-Radius.</li>
+        <li><b>Zugangsanfrage:</b> Status der Freigabe und deine optionale Nachricht. Beides sehen nur die Betreiber, die über die Freigabe entscheiden.</li>
         <li><b>Meldungen:</b> Ort, Zeit, Art. Andere sehen nicht, wer gemeldet hat.</li>
-        <li><b>Auto-Standort:</b> nur wenn du ihn speicherst, um dich warnen zu können. Nach 24 Stunden wird er für Warnungen nicht mehr genutzt.</li>
+        <li><b>Auto-Standort:</b> nur wenn du ihn speicherst, um dich informieren zu können. Nach 24 Stunden wird er für Hinweise nicht mehr genutzt.</li>
         <li><b>Parkschein:</b> nur Start- und Endzeit für Countdown und Erinnerung – kein Kennzeichen, keine Zahlungsdaten.</li>
         <li><b>Push:</b> ein technischer Empfangs-Endpunkt deines Browsers.</li>
       </ul>
@@ -45,7 +55,7 @@ const TEXTS = {
     body: `
       <p><i>Vor der Veröffentlichung ausfüllen (Pflicht nach § 5 DDG).</i></p>
       <p>[Name / Firma]<br>[Straße Hausnummer]<br>[PLZ Ort]<br>E-Mail: [kontakt@…]</p>
-      <p>Don’t get busted ist ein unabhängiges Angebot und steht in keiner Verbindung zu Ordnungsbehörden. „EasyPark“ ist eine Marke der EasyPark Group.</p>`,
+      <p>ParkCheck ist ein unabhängiges Angebot und steht in keiner Verbindung zu Ordnungsbehörden. „EasyPark“ ist eine Marke der EasyPark Group.</p>`,
   },
 };
 

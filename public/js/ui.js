@@ -41,17 +41,21 @@ const P = {
   refresh: '<path d="M20 11a8 8 0 0 0-14.8-4M4 4v4h4M4 13a8 8 0 0 0 14.8 4M20 20v-4h-4"/>',
   ticket: '<path d="M3 8a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.2a1.8 1.8 0 0 0 0 3.6V16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2.2a1.8 1.8 0 0 0 0-3.6z"/><path d="M15 7v10" stroke-dasharray="1.5 2.5"/>',
   target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  slip: '<path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5L6 21z"/><path d="M9 8h6M9 11.5h6M9 15h3.5"/>',
+  noStop: '<circle cx="12" cy="12" r="9"/><path d="M5.8 5.8l12.4 12.4M18.2 5.8 5.8 18.2"/>',
+  street: '<path d="M8 3 5 21M16 3l3 18M12 4v3M12 10.5v3M12 17v3"/>',
 };
 
 export function icon(name, cls = '') {
   return `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[name] || ''}</svg>`;
 }
 
+// Gemeldet wird ein vergebenes Ticket. Die internen Namen (patrol, foot, …) bleiben aus Kompatibilität.
 export const KIND = {
-  patrol: { label: 'Kontrolle', icon: 'siren' },
-  foot: { label: 'Fußstreife', icon: 'foot' },
-  car: { label: 'Fahrzeug', icon: 'car' },
-  tow: { label: 'Abschlepp\u00ADwagen', icon: 'tow' },
+  patrol: { label: 'Ticket', icon: 'slip' },
+  foot: { label: 'Kein Park\u00ADschein', icon: 'timer' },
+  car: { label: 'Halte\u00ADverbot', icon: 'noStop' },
+  tow: { label: 'Abge\u00ADschleppt', icon: 'tow' },
 };
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };

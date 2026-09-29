@@ -1,7 +1,7 @@
 {
-  "name": "Don’t get busted – Kontrolle in der Nähe?",
-  "short_name": "Don’t get busted",
-  "description": "Parkkontrolle gesehen? Ein Tipp – alle in der Nähe sind gewarnt. Parkschein direkt über EasyPark.",
+  "name": "ParkCheck – Parkschein gecheckt?",
+  "short_name": "ParkCheck",
+  "description": "ParkCheck erinnert dich beim Parken an deinen Parkschein – lösen, verlängern, nie wieder vergessen. Direkt über EasyPark.",
   "lang": "de",
   "start_url": "/?source=pwa",
   "scope": "/",

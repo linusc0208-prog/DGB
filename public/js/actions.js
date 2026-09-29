@@ -85,6 +85,15 @@ export async function saveCar(pos) {
   setState({ car });
   return car;
 }
+/** Erinnerung beim Parken an/aus */
+export async function setParkReminder(on) {
+  const user = toUser(await rpc('set_park_reminder', { p_on: !!on }), state.authUser);
+  setState({ user });
+  return user;
+}
+/** Für den aktuellen Parkplatz keine Parkschein-Erinnerung mehr schicken */
+export const dismissParkPrompt = () => rpc('dismiss_park_prompt').catch(() => {});
+
 export async function removeCar() {
   await rpc('remove_car');
   setState({ car: null });

@@ -1,10 +1,24 @@
-# 🅿️ Don’t get busted
+# 🅿️ ParkCheck
 
-**Parkkontrolle gesehen? Ein Tipp, und alle in der Nähe sind gewarnt. Der Parkschein geht direkt über EasyPark.**
+**Parkschein gecheckt? ParkCheck erinnert dich beim Parken an deinen Parkschein, zeigt den Countdown, erinnert vor dem Ablaufen und zeigt, wo oft Tickets vergeben werden. Gelöst wird direkt über EasyPark.**
+
+**Ausrichtung:** ParkCheck ist eine Erinnerungs-App zum rechtzeitigen Bezahlen, kein Werkzeug gegen Kontrollen. Nutzer verpflichten sich in den Nutzungsbedingungen (bei der Registrierung bestätigt), die Parkregeln einzuhalten. Es gibt keine Entwarnungen („alles ruhig“, „Kontrolle weg“): Wo keine Meldungen vorliegen, erinnert die App daran, dass die Parkregeln trotzdem gelten. Meldungen enden nur durch Zeitablauf oder als Falschmeldung, ohne Benachrichtigung.
+
+Community-Hinweise: Gemeldet wird ein **vergebenes Ticket** (Strafzettel, kein Parkschein, Halteverbot, Abschleppen). Autos in der Nähe bekommen den Hinweis, ihren Parkschein zu prüfen. Zusätzlich zeigt die App für die Straße, in der du gerade bist, wie viele Tickets dort gemeldet wurden und wann zuletzt.
+
+**Zugang nur mit Freigabe:** Neue Nutzer schicken beim Registrieren eine Zugangsanfrage und sehen bis zur Freigabe nur einen Warte-Bildschirm. Admins bekommen eine Push-Nachricht und nehmen unter **Profil → Zugangsanfragen** an oder lehnen ab. Durchgesetzt wird das in der Datenbank (`_me()` und die Zugriffsregel auf `reports`), nicht nur in der Oberfläche. Admin wird man einmalig per SQL:
+
+```sql
+update public.profiles set is_admin = true, access = 'approved'
+ where id = (select id from auth.users where lower(email) = lower('deine@email.de'))
+returning name, access, is_admin;
+```
+
+**Parkschein-Erinnerung:** Wer sein Auto abstellt, wird gefragt „Parkschein gecheckt?“ (lösen, „Schon gelöst“ mit Countdown oder „Hier nicht nötig“): direkt nach „Hier geparkt“, wenn die App ein Fahrt-Ende erkennt, über den Link `/?parked=1` (z. B. per Kurzbefehl-Automation, wenn sich das Handy vom Auto trennt) und per Push 3 Minuten nach dem Abstellen, falls noch kein Parkschein läuft. „Hier nicht nötig“ und ein Schalter im Profil schalten sie ab.
 
 Technik: **Supabase** (Datenbank, Login, Live-Updates, Push-Funktion, Zeitsteuerung) · **Vercel** (liefert die App aus) · **GitHub** (Code, automatische Veröffentlichung).
 
-> Die ausführliche Schritt-für-Schritt-Anleitung liegt als eigenes Dokument vor („Don’t get busted online bringen“). Hier die Kurzfassung.
+> Die ausführliche Schritt-für-Schritt-Anleitung liegt als eigenes Dokument vor („ParkCheck online bringen“). Hier die Kurzfassung.
 
 ## Einrichtung in Kürze
 
@@ -39,15 +53,15 @@ vercel.json                           Build-Einstellungen und Sicherheits-Header
 test/                                 Tests der Datenbank-Logik
 ```
 
-**Wie eine Warnung ankommt:** Meldung → Funktion `create_report` findet Autos im Warnradius → Eintrag in `outbox` → (a) Realtime schickt ihn live an die offene App, (b) ein Datenbank-Auslöser ruft per `pg_net` die Edge Function `send-push` auf → Push aufs Handy.
+**Wie ein Hinweis ankommt:** Meldung → Funktion `create_report` findet Autos im Warnradius → Eintrag in `outbox` → (a) Realtime schickt ihn live an die offene App, (b) ein Datenbank-Auslöser ruft per `pg_net` die Edge Function `send-push` auf → Push aufs Handy.
 
-**Taktgeber:** `pg_cron` ruft jede Minute `tick()` auf. Das lässt Meldungen ablaufen (nach 20 Min., jede Bestätigung +15 Min., höchstens 60 Min.), verschickt Parkschein-Erinnerungen 10 Minuten vor Ablauf und räumt abgemeldete Geräte auf.
+**Taktgeber:** `pg_cron` ruft jede Minute `tick()` auf. Das schickt die Parkschein-Erinnerung nach dem Abstellen, lässt Meldungen ablaufen (nach 20 Min., jede Bestätigung +15 Min., höchstens 60 Min.), verschickt Parkschein-Erinnerungen 10 Minuten vor Ablauf und räumt abgemeldete Geräte auf.
 
 **Datenschutz im Aufbau:** Meldungen (`reports`) enthalten keinen Nutzerbezug und sind öffentlich lesbar. Wer was gemeldet hat, steht getrennt in `report_authors`, und das darf nur die Person selbst lesen. Alle Schreibzugriffe laufen über geprüfte Funktionen, direkte Tabellenänderungen sind gesperrt.
 
 ## EasyPark
 
-EasyPark hat keine öffentliche API zum Starten von Parkvorgängen. Don’t get busted öffnet deshalb die EasyPark-App (Android: Paket `net.easypark.android`, iOS: URL-Schema mit App-Store-Fallback). Countdown und Erinnerung in Don’t get busted sind eine Komfortfunktion; maßgeblich ist der Status in EasyPark.
+EasyPark hat keine öffentliche API zum Starten von Parkvorgängen. ParkCheck öffnet deshalb die EasyPark-App (Android: Paket `net.easypark.android`, iOS: URL-Schema mit App-Store-Fallback). Countdown und Erinnerung in ParkCheck sind eine Komfortfunktion; maßgeblich ist der Status in EasyPark.
 
 ## Vor dem Livegang
 

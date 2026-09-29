@@ -19,4 +19,4 @@ http.createServer((req, res) => {
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(PUB, 'index.html');
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
   fs.createReadStream(file).pipe(res);
-}).listen(port, () => console.log(`\n  🅿️  Don’t get busted lokal: http://localhost:${port}\n`));
+}).listen(port, () => console.log(`\n  🅿️  ParkCheck lokal: http://localhost:${port}\n`));

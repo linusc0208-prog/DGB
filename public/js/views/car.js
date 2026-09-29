@@ -1,5 +1,6 @@
 import { state, setState, subscribe, prefs } from '../store.js';
-import { saveCar, removeCar, updateMe, nearestReport, loadProvider, startSession, extendSession, stopSession } from '../actions.js';
+import { saveCar, removeCar, updateMe, nearestReport, loadProvider, startSession, extendSession, stopSession, dismissParkPrompt } from '../actions.js';
+import { showParkPrompt } from './parkprompt.js';
 import { requestPosition } from '../geo.js';
 import * as mapx from '../map.js';
 import { icon, esc, $, $$, openSheet, toast, haptic, withLoading, confirmDialog, timeAgo, fmtDist, fmtClock, fmtDuration, distance } from '../ui.js';
@@ -38,7 +39,8 @@ function openEasyPark(links, onDesktopClose) {
 export function startParking() {
   const links = state.provider?.links;
   if (!links) { loadProvider().then(startParking).catch((e) => toast(e.message, { type: 'err' })); return; }
-  if (!state.car && state.pos) saveCar(state.pos).catch(() => {});
+  // Wer den Parkschein löst, braucht keine Erinnerung mehr für diesen Parkplatz
+  (!state.car && state.pos ? saveCar(state.pos) : Promise.resolve()).then(() => dismissParkPrompt()).catch(() => {});
   prefs.set('handoff', Date.now());
   openEasyPark(links, () => promptHandoff(true));
 }
@@ -93,12 +95,12 @@ function body() {
   const radius = state.user?.alertRadius || 300;
   const s = state.session;
   const parkBtn = `<button class="btn ep block" data-park style="min-height:56px;font-size:16px">${icon('ticket')} Parkschein lösen</button><p class="hint" style="text-align:center;margin:6px 0 0">öffnet die EasyPark-App</p>`;
-  const radiusSeg = `<div class="label">Warnen im Umkreis von</div>
+  const radiusSeg = `<div class="label">Hinweise im Umkreis von</div>
     <div class="seg">${RADII.map((r) => `<button data-radius="${r}" class="${r === radius ? 'on' : ''}">${r} m</button>`).join('')}</div>`;
 
   if (!car) {
     return `
-      <p class="muted" style="margin:0 0 16px">Speichere, wo du parkst – wir warnen dich, sobald eine Kontrolle in die Nähe kommt.</p>
+      <p class="muted" style="margin:0 0 16px">Speichere, wo du parkst – wir sagen dir Bescheid, sobald in der Nähe ein Ticket gemeldet wird.</p>
       <button class="btn primary block" data-here style="min-height:56px;font-size:16px">${icon('pin')} Hier geparkt</button>
       ${s ? `<div style="margin-top:12px">${sessionHtml(s)}</div>` : `<div style="margin-top:10px">${parkBtn}</div>`}
       ${radiusSeg}`;
@@ -112,8 +114,8 @@ function body() {
       <button class="btn sm outline" data-show>${icon('map', 'sm')}</button>
     </div>
     ${near
-      ? `<div class="box alert"><span class="ico">${icon('siren')}</span><div class="grow"><b>${esc(near.kindLabel)} ${fmtDist(near.d)} entfernt</b><span class="small muted">${esc(near.street || '')}${near.street ? ' · ' : ''}${timeAgo(near.createdAt)}</span></div></div>`
-      : `<div class="box ok"><span class="ico">${icon('check')}</span><div class="grow"><b>Alles ruhig</b><span class="small muted">Keine Meldung im Umkreis von ${radius} m</span></div></div>`}
+      ? `<div class="box alert"><span class="ico">${icon('slip')}</span><div class="grow"><b>${near.kind === 'tow' ? 'Abschleppen' : 'Ticket'} gemeldet · ${fmtDist(near.d)} entfernt</b><span class="small muted">${near.kind === 'foot' || near.kind === 'car' ? `${esc(near.kindLabel)} · ` : ''}${esc(near.street || '')}${near.street ? ' · ' : ''}${timeAgo(near.createdAt)}</span></div></div>`
+      : `<div class="box"><span class="ico">${icon('info')}</span><div class="grow"><b>Keine aktuellen Meldungen</b><span class="small muted">im Umkreis von ${radius} m – die Parkregeln gelten trotzdem</span></div></div>`}
     ${s ? sessionHtml(s) : parkBtn}
     ${radiusSeg}
     <p class="hint" style="margin:12px 2px 0">Standort nicht ganz richtig? Verschiebe das Auto-Symbol auf der Karte.</p>
@@ -125,14 +127,16 @@ function bind(el) {
   $('[data-here]', el)?.addEventListener('click', (e) => withLoading(e.currentTarget, async () => {
     try {
       const pos = state.pos || (await requestPosition());
-      await saveCar(pos);
+      const car = await saveCar(pos);
       haptic(15);
-      toast('Gespeichert. Wir warnen dich, wenn es eng wird.', { type: 'ok' });
+      if (state.session) { toast('Gespeichert. Wir sagen dir Bescheid, wenn in der Nähe ein Ticket gemeldet wird.', { type: 'ok' }); return; }
+      sheet?.close();
+      showParkPrompt({ street: car.street });
     } catch (err) { toast(err.message, { type: 'err' }); }
   }));
   $('[data-show]', el)?.addEventListener('click', () => { sheet?.close(); mapx.flyTo(state.car, 17); });
   $('[data-remove]', el)?.addEventListener('click', async () => {
-    if (!(await confirmDialog({ title: 'Auto entfernen?', text: 'Du bekommst dann keine Warnungen mehr für diesen Parkplatz.', confirm: 'Entfernen' }))) return;
+    if (!(await confirmDialog({ title: 'Auto entfernen?', text: 'Du bekommst dann keine Hinweise mehr für diesen Parkplatz.', confirm: 'Entfernen' }))) return;
     await removeCar().catch((e) => toast(e.message, { type: 'err' }));
   });
   $$('[data-radius]', el).forEach((b) => {

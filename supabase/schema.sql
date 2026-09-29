@@ -1,5 +1,5 @@
 -- =====================================================================
---  Don’t get busted – Datenbank für Supabase
+--  ParkCheck – Datenbank für Supabase
 --  Komplett in den SQL Editor kopieren und auf "Run" klicken.
 --  Das Skript kann gefahrlos mehrmals ausgeführt werden (z. B. nach Updates).
 -- =====================================================================
@@ -113,6 +113,29 @@ create table if not exists public.app_config (
 --  Lesen: nur eigene Daten (Meldungen sind öffentlich).
 --  Schreiben: ausschließlich über die Funktionen weiter unten.
 -- ---------------------------------------------------------------------
+-- Erinnerung beim Parken (nachträglich ergänzt, deshalb als eigene Spalten)
+alter table public.profiles add column if not exists park_reminder  boolean not null default true;
+alter table public.cars     add column if not exists park_prompt_at timestamptz;
+
+-- Zugang nur nach Freigabe. Wer beim Einführen schon ein Konto hatte, bleibt freigeschaltet.
+alter table public.profiles add column if not exists access text;
+update public.profiles set access = 'approved' where access is null;
+alter table public.profiles alter column access set default 'pending';
+alter table public.profiles alter column access set not null;
+alter table public.profiles drop constraint if exists profiles_access_check;
+alter table public.profiles add constraint profiles_access_check check (access in ('pending', 'approved', 'rejected'));
+alter table public.profiles add column if not exists is_admin boolean not null default false;
+alter table public.profiles add column if not exists access_note text;
+alter table public.profiles add column if not exists access_changed_at timestamptz;
+alter table public.profiles drop constraint if exists profiles_access_note_check;
+alter table public.profiles add constraint profiles_access_note_check check (char_length(access_note) <= 300);
+
+-- Ist der angemeldete Nutzer freigeschaltet? (für die Zugriffsregeln)
+create or replace function public._approved()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and access = 'approved' and not banned)
+$$;
+
 alter table public.profiles           enable row level security;
 alter table public.reports            enable row level security;
 alter table public.report_authors     enable row level security;
@@ -128,7 +151,7 @@ drop policy if exists "eigenes Profil lesen" on public.profiles;
 create policy "eigenes Profil lesen" on public.profiles for select to authenticated using (id = auth.uid());
 
 drop policy if exists "Meldungen lesen" on public.reports;
-create policy "Meldungen lesen" on public.reports for select to authenticated using (true);
+create policy "Meldungen lesen" on public.reports for select to authenticated using (public._approved());
 
 drop policy if exists "eigene Meldungen erkennen" on public.report_authors;
 create policy "eigene Meldungen erkennen" on public.report_authors for select to authenticated using (user_id = auth.uid());
@@ -163,8 +186,8 @@ returns float8 language sql immutable as $$
     cos(radians(lat1)) * cos(radians(lat2)) * power(sin(radians(lng2 - lng1) / 2), 2))))
 $$;
 
--- Angemeldeten Nutzer holen, sonst Fehler
-create or replace function public._me()
+-- Angemeldeten Nutzer holen, sonst Fehler (auch ohne Freigabe – für Profil, Anfrage, Datenschutz)
+create or replace function public._me_any()
 returns public.profiles language plpgsql security definer set search_path = public as $$
 declare p public.profiles;
 begin
@@ -178,6 +201,28 @@ begin
   if p.banned then
     raise exception 'Dein Konto wurde gesperrt.' using errcode = '42501';
   end if;
+  return p;
+end $$;
+
+-- Angemeldeter und freigeschalteter Nutzer – Voraussetzung für alle App-Funktionen
+create or replace function public._me()
+returns public.profiles language plpgsql security definer set search_path = public as $$
+declare p public.profiles := public._me_any();
+begin
+  if p.access = 'rejected' then
+    raise exception 'Deine Anfrage wurde leider abgelehnt.' using errcode = '42501';
+  elsif p.access <> 'approved' then
+    raise exception 'Dein Zugang ist noch nicht freigeschaltet.' using errcode = '42501';
+  end if;
+  return p;
+end $$;
+
+-- Nur für Admins
+create or replace function public._admin()
+returns public.profiles language plpgsql security definer set search_path = public as $$
+declare p public.profiles := public._me();
+begin
+  if not p.is_admin then raise exception 'Nur für Admins.' using errcode = '42501'; end if;
   return p;
 end $$;
 
@@ -215,12 +260,13 @@ begin
   select * into r from public.reports where id = p_report_id;
   if not found or r.status <> 'active' then return 0; end if;
   select user_id into author from public.report_authors where report_id = r.id;
-  label := case r.kind when 'foot' then 'Fußstreife' when 'car' then 'Fahrzeug' when 'tow' then 'Abschleppwagen' else 'Kontrolle' end;
+  -- Hinweis-Text: Es wird gemeldet, dass hier ein Ticket vergeben wurde
+  label := case r.kind when 'foot' then 'kein Parkschein' when 'car' then 'Halteverbot' else null end;
   for c in
     select cars.*, p.alert_radius from public.cars
     join public.profiles p on p.id = cars.user_id
     where cars.parked_at > now() - interval '24 hours'
-      and not p.banned
+      and not p.banned and p.access = 'approved'
       and cars.user_id is distinct from author
       and cars.user_id is distinct from p_actor
       and cars.lat between r.lat - 0.006 and r.lat + 0.006
@@ -231,8 +277,11 @@ begin
     insert into public.car_alerts (user_id, report_id) values (c.user_id, r.id) on conflict do nothing;
     continue when not found;
     insert into public.outbox (user_id, kind, payload) values (c.user_id, 'car_alert', jsonb_build_object(
-      'title', '⚠️ ' || label || ' ca. ' || greatest(10, round(d / 10) * 10)::int || ' m von deinem Auto',
-      'body', coalesce(r.street || ' – ', '') || 'jetzt Parkschein über EasyPark lösen?',
+      'title', '🎫 ' || case when r.kind = 'tow' then 'Abschleppen' else 'Ticket' end || ' gemeldet – ca. '
+               || greatest(10, round(d / 10) * 10)::int || ' m von deinem Auto',
+      'body', 'Hier wurde ' || case when r.kind = 'tow' then 'ein Auto abgeschleppt' else 'ein Ticket vergeben' end
+               || coalesce(' (' || r.street || coalesce(', ' || label, '') || ')', coalesce(' (' || label || ')', ''))
+               || '. Bitte beachte die Parkregeln und prüfe deinen Parkschein.',
       'tag', 'report-' || r.id,
       'url', '/?report=' || r.id,
       'reportId', r.id,
@@ -402,7 +451,7 @@ begin
   return public._report_json(r, me.id);
 end $$;
 
--- "Noch da" / "Ist weg"
+-- Abstimmen: "Stimmt" (bestätigen) / "Falschmeldung"
 create or replace function public.vote_report(p_id bigint, p_value text)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare me public.profiles := public._me(); r public.reports; author uuid; v int;
@@ -438,18 +487,20 @@ end $$;
 -- Profil
 create or replace function public.get_profile()
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare me public.profiles := public._me();
+declare me public.profiles := public._me_any();
 begin
   return jsonb_build_object(
     'id', me.id, 'name', me.name, 'reputation', me.reputation, 'alert_radius', me.alert_radius,
-    'created_at', me.created_at,
+    'park_reminder', me.park_reminder, 'created_at', me.created_at,
+    'access', me.access, 'is_admin', me.is_admin, 'access_note', me.access_note,
+    'pending_count', case when me.is_admin then (select count(*) from public.profiles where access = 'pending') else null end,
     'confirmed', (select coalesce(sum(r.confirms), 0) from public.reports r
                   join public.report_authors a on a.report_id = r.id where a.user_id = me.id));
 end $$;
 
 create or replace function public.update_profile(p_name text default null, p_alert_radius int default null)
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare me public.profiles := public._me();
+declare me public.profiles := public._me_any();
 begin
   if p_name is not null and char_length(btrim(p_name)) not between 2 and 40 then
     raise exception 'Der Name muss 2 bis 40 Zeichen lang sein.';
@@ -473,10 +524,31 @@ begin
   end if;
   insert into public.cars (user_id, lat, lng, street, parked_at)
   values (me.id, p_lat, p_lng, public._clean_street(p_street), now())
-  on conflict (user_id) do update set lat = excluded.lat, lng = excluded.lng, street = excluded.street, parked_at = excluded.parked_at
+  on conflict (user_id) do update set lat = excluded.lat, lng = excluded.lng, street = excluded.street, parked_at = excluded.parked_at,
+    park_prompt_at = case
+      when public._dist_m(public.cars.lat, public.cars.lng, excluded.lat, excluded.lng) > 100
+        or public.cars.parked_at < now() - interval '1 hour' then null
+      else public.cars.park_prompt_at end
   returning * into c;
   delete from public.car_alerts where user_id = me.id;
   return to_jsonb(c);
+end $$;
+
+-- Erinnerung beim Parken an/aus
+create or replace function public.set_park_reminder(p_on boolean)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare me public.profiles := public._me();
+begin
+  update public.profiles set park_reminder = coalesce(p_on, true) where id = me.id;
+  return public.get_profile();
+end $$;
+
+-- Für den aktuellen Parkplatz keine Erinnerung mehr (Parkschein gelöst oder hier nicht nötig)
+create or replace function public.dismiss_park_prompt()
+returns void language plpgsql security definer set search_path = public as $$
+declare me public.profiles := public._me();
+begin
+  update public.cars set park_prompt_at = coalesce(park_prompt_at, now()) where user_id = me.id;
 end $$;
 
 create or replace function public.remove_car()
@@ -522,7 +594,7 @@ end $$;
 -- Push-Abo des Geräts speichern / entfernen
 create or replace function public.save_push_subscription(p_endpoint text, p_p256dh text, p_auth text)
 returns void language plpgsql security definer set search_path = public as $$
-declare me public.profiles := public._me();
+declare me public.profiles := public._me_any();
 begin
   if p_endpoint !~ '^https://' or char_length(p_endpoint) > 1000 then raise exception 'Ungültiges Push-Abo.'; end if;
   insert into public.push_subscriptions (user_id, endpoint, p256dh, auth)
@@ -532,15 +604,69 @@ end $$;
 
 create or replace function public.delete_push_subscription(p_endpoint text)
 returns void language plpgsql security definer set search_path = public as $$
-declare me public.profiles := public._me();
+declare me public.profiles := public._me_any();
 begin
   delete from public.push_subscriptions where endpoint = p_endpoint and user_id = me.id;
+end $$;
+
+-- ---------------------------------------------------------------------
+--  Zugang: Anfrage, Freigabe durch Admins
+-- ---------------------------------------------------------------------
+-- Kurze Nachricht an die Admins, solange die Anfrage offen ist
+create or replace function public.set_access_note(p_note text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare me public.profiles := public._me_any();
+begin
+  if me.access <> 'pending' then raise exception 'Deine Anfrage ist schon bearbeitet.'; end if;
+  update public.profiles set access_note = nullif(left(btrim(coalesce(p_note, '')), 300), '') where id = me.id;
+  return public.get_profile();
+end $$;
+
+-- Liste für Admins: offene, freigegebene oder abgelehnte Nutzer
+create or replace function public.admin_list_users(p_filter text default 'pending')
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare me public.profiles := public._admin();
+begin
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', p.id, 'name', p.name, 'email', u.email, 'access', p.access, 'note', p.access_note,
+      'is_admin', p.is_admin, 'created_at', p.created_at, 'changed_at', p.access_changed_at)
+      order by p.created_at desc)
+    from (select * from public.profiles
+           where p_filter = 'all' or access = p_filter
+           order by created_at desc limit 300) p
+    join auth.users u on u.id = p.id), '[]'::jsonb);
+end $$;
+
+-- Freigeben / ablehnen / wieder sperren
+create or replace function public.admin_set_access(p_user uuid, p_access text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare me public.profiles := public._admin(); old text;
+begin
+  if p_access not in ('approved', 'rejected', 'pending') then raise exception 'Ungültiger Status.'; end if;
+  if p_user = me.id then raise exception 'Deinen eigenen Zugang kannst du nicht ändern.'; end if;
+  select access into old from public.profiles where id = p_user;
+  if not found then raise exception 'Nutzer nicht gefunden.'; end if;
+  update public.profiles set access = p_access, access_changed_at = now() where id = p_user;
+  if p_access = 'approved' and old <> 'approved' then
+    insert into public.outbox (user_id, kind, payload) values (p_user, 'access_granted', jsonb_build_object(
+      'type', 'access_granted',
+      'title', '✅ Du bist freigeschaltet',
+      'body', 'Willkommen bei ParkCheck! Tippe hier, um loszulegen.',
+      'tag', 'access',
+      'url', '/'));
+  end if;
+  if p_access <> 'approved' then
+    delete from public.cars where user_id = p_user;
+    update public.parking_sessions set status = 'stopped', stopped_at = now() where user_id = p_user and status = 'active';
+  end if;
+  return jsonb_build_object('id', p_user, 'access', p_access);
 end $$;
 
 -- DSGVO: Datenexport (Art. 20) und Konto löschen (Art. 17)
 create or replace function public.export_my_data()
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare me public.profiles := public._me();
+declare me public.profiles := public._me_any();
 begin
   return jsonb_build_object(
     'exported_at', now(),
@@ -570,6 +696,16 @@ begin
   insert into public.profiles (id, name)
   values (new.id, left(btrim(coalesce(new.raw_user_meta_data ->> 'name', '')), 40))
   on conflict (id) do nothing;
+  -- Admins bekommen eine Nachricht über die neue Zugangsanfrage
+  insert into public.outbox (user_id, kind, payload)
+  select a.id, 'access_request', jsonb_build_object(
+    'type', 'access_request',
+    'title', '👋 Neue Zugangsanfrage',
+    'body', coalesce(nullif(left(btrim(coalesce(new.raw_user_meta_data ->> 'name', '')), 40), ''), 'Jemand')
+            || ' möchte ParkCheck nutzen. Tippe hier zum Prüfen.',
+    'tag', 'access-request',
+    'url', '/?requests=1')
+  from public.profiles a where a.is_admin and a.access = 'approved' and a.id <> new.id;
   return new;
 end $$;
 
@@ -648,6 +784,40 @@ begin
 
   update public.parking_sessions set status = 'expired' where status = 'active' and ends_at <= now();
 
+  with due as (
+    update public.cars c set park_prompt_at = now()
+      from public.profiles p
+     where p.id = c.user_id and p.park_reminder and not p.banned and p.access = 'approved'
+       and c.park_prompt_at is null
+       and c.parked_at <= now() - interval '3 minutes'
+       and c.parked_at >  now() - interval '30 minutes'
+       and not exists (select 1 from public.parking_sessions s
+                        where s.user_id = c.user_id
+                          and (s.status = 'active' or s.started_at >= c.parked_at - interval '15 minutes'))
+    returning c.user_id, c.lat, c.lng, c.street
+  ), counted as (
+    select d.*, (select count(*) from public.reports r
+                  where d.street is not null and lower(r.street) = lower(d.street)
+                    and r.lat between d.lat - 0.02 and d.lat + 0.02
+                    and r.lng between d.lng - 0.03 and d.lng + 0.03
+                    and r.created_at > now() - interval '30 days'
+                    and r.status <> 'removed')::int as n
+      from due d
+  )
+  insert into public.outbox (user_id, kind, payload)
+  select user_id, 'park_prompt', jsonb_build_object(
+    'type', 'park_prompt',
+    'title', '🅿️ Parkschein gecheckt?',
+    'body', case when n > 0
+                 then street || ': ' || n || case when n = 1 then ' Ticket' else ' Tickets' end
+                      || ' in den letzten 30 Tagen gemeldet. Prüfe, ob du einen Parkschein brauchst.'
+                 else 'Du hast gerade geparkt. Prüfe, ob du hier einen Parkschein brauchst – und ob er schon läuft.' end,
+    'tag', 'park-prompt',
+    'url', '/?car=1&park=1',
+    'street', street,
+    'count', n)
+  from counted;
+
   perform public._cleanup_push();
   delete from public.outbox where created_at < now() - interval '2 days';
   delete from public.car_alerts where created_at < now() - interval '2 days';
@@ -656,9 +826,49 @@ end $$;
 select cron.schedule('parkradar-tick', '* * * * *', 'select public.tick()');
 
 -- ---------------------------------------------------------------------
+--  Straßen-Statistik: Wie viele Tickets wurden in dieser Straße gemeldet, wann zuletzt?
+-- ---------------------------------------------------------------------
+create index if not exists reports_street_idx on public.reports (lower(street), created_at desc);
+
+create or replace function public.street_stats(p_lat float8, p_lng float8, p_street text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  me public.profiles := public._me();
+  s text := public._clean_street(p_street);
+  res jsonb;
+begin
+  if s is null or p_lat is null or p_lng is null then return null; end if;
+  with t as (
+    select r.created_at, r.kind from public.reports r
+     where lower(r.street) = lower(s)
+       -- gleicher Straßenname nur in der Umgebung (~2 km), nicht in der ganzen Stadt
+       and r.lat between p_lat - 0.02 and p_lat + 0.02
+       and r.lng between p_lng - 0.03 and p_lng + 0.03
+       and r.created_at > now() - interval '90 days'
+       and r.status <> 'removed'
+       -- sofort widerlegte Meldungen zählen nicht
+       and not (r.status = 'gone' and r.peak_confirms = 0 and r.updated_at - r.created_at < interval '5 minutes')
+  )
+  select jsonb_build_object(
+    'street', s,
+    'today',  count(*) filter (where t.created_at >= (date_trunc('day', now() at time zone 'Europe/Berlin') at time zone 'Europe/Berlin')),
+    'week',   count(*) filter (where t.created_at > now() - interval '7 days'),
+    'month',  count(*) filter (where t.created_at > now() - interval '30 days'),
+    'total',  count(*),
+    'last',   max(t.created_at),
+    'hours',  (select jsonb_agg(coalesce(h.n, 0) order by g)
+                 from generate_series(0, 23) g
+                 left join (select extract(hour from created_at at time zone 'Europe/Berlin')::int hr, count(*) n from t group by 1) h on h.hr = g))
+    into res from t;
+  return res;
+end $$;
+
+-- ---------------------------------------------------------------------
 --  Rechte: interne Funktionen sind für die App nicht aufrufbar
 -- ---------------------------------------------------------------------
 revoke execute on function public._me() from public, anon, authenticated;
+revoke execute on function public._me_any() from public, anon, authenticated;
+revoke execute on function public._admin() from public, anon, authenticated;
 revoke execute on function public._report_json(public.reports, uuid, float8, float8) from public, anon, authenticated;
 revoke execute on function public._alert_cars(bigint, uuid) from public, anon, authenticated;
 revoke execute on function public._apply_vote(bigint, uuid, int) from public, anon, authenticated;

@@ -14,6 +14,10 @@ import { openCarSheet, promptHandoff } from './views/car.js';
 import { openProfile } from './views/profile.js';
 import { maybeOnboard } from './views/onboarding.js';
 import { renderTop } from './views/alerts.js';
+import { refreshStreet, onReportChanged, renderStreet } from './views/street.js';
+import { showParkPrompt, parkHere, askParked } from './views/parkprompt.js';
+import { showPending, hidePending } from './views/pending.js';
+import { openAdmin } from './views/admin.js';
 
 let started = false;
 let firstFix = true;
@@ -48,14 +52,24 @@ async function startApp(authUser) {
   if (startingFor === authUser.id) return; // schon gestartet
   startingFor = authUser.id;
   setState({ authUser });
+  let me;
   try {
-    await loadMe(authUser);
+    me = await loadMe(authUser);
   } catch (e) {
     startingFor = null;
     toast(e.message, { type: 'err', duration: 6000 });
     showAuth();
     return;
   }
+  // Noch nicht freigeschaltet: Warte-Bildschirm statt App
+  if (me.access !== 'approved') {
+    showPending(me, {
+      onApproved: () => { startingFor = null; startApp(authUser); },
+      onLogout: () => logout(),
+    });
+    return;
+  }
+  hidePending();
   $('#auth').classList.add('hidden');
   $('#app').classList.remove('hidden');
   if (!started) setup();
@@ -88,7 +102,7 @@ function setup() {
   });
   applyTheme();
 
-  $('#report-icon').innerHTML = icon('siren');
+  $('#report-icon').innerHTML = icon('slip');
   $('#btn-locate').innerHTML = icon('locate');
   $('#btn-report').onclick = () => quickReport();
   $('#btn-car').onclick = () => openCarSheet();
@@ -103,10 +117,17 @@ function setup() {
     if (n) openReportDetail(n.id); else mapx.flyTo(state.pos, 16);
   };
 
-  subscribe(() => { mapx.renderReports([...state.reports.values()]); updateStatus(); renderTop(); }, ['reports']);
+  const seenReports = new Set();
+  subscribe(() => {
+    mapx.renderReports([...state.reports.values()]);
+    updateStatus();
+    renderTop();
+    for (const r of state.reports.values()) if (!seenReports.has(r.id)) { seenReports.add(r.id); onReportChanged(r); }
+  }, ['reports']);
   subscribe(() => {
     mapx.setMe(state.pos);
     prefetchStreet(state.pos);
+    refreshStreet();
     if (firstFix && state.pos) {
       firstFix = false;
       if (!new URLSearchParams(location.search).get('report')) mapx.flyTo(state.pos, 16);
@@ -120,14 +141,19 @@ function setup() {
     $('#avatar-btn').textContent = initials(state.user?.name);
     renderTop();
   }, ['car', 'user', 'session']);
+  let wasDriving = false;
   subscribe(() => {
     $('#btn-report').classList.toggle('disabled', isDrivingBlocked());
     renderTop();
+    renderStreet();
+    // Fahrt zu Ende (nicht durch Beifahrer-Modus) → "Geparkt?"
+    if (wasDriving && !state.driving && Date.now() > state.passengerUntil && document.visibilityState === 'visible') askParked();
+    wasDriving = state.driving;
   }, ['driving', 'passengerUntil']);
 
   // Alter und Deckkraft regelmäßig auffrischen, abgelaufene Meldungen entfernen
   setInterval(() => { pruneReports(); mapx.renderReports([...state.reports.values()]); updateStatus(); }, 30_000);
-  setInterval(() => { if (document.visibilityState === 'visible') loadReports().catch(() => {}); }, 60_000);
+  setInterval(() => { if (document.visibilityState === 'visible') { loadReports().catch(() => {}); refreshStreet(); } }, 60_000);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') { loadReports().catch(() => {}); loadSession().catch(() => {}); }
   });
@@ -136,8 +162,12 @@ function setup() {
   // Aus Push-Benachrichtigung geöffnet
   const params = new URLSearchParams(location.search);
   const rid = Number(params.get('report'));
-  if (rid || params.get('car')) history.replaceState(null, '', '/');
-  if (params.get('car')) setTimeout(() => openCarSheet(), 600);
+  if (rid || params.get('car') || params.get('parked')) history.replaceState(null, '', '/');
+  if (params.get('requests')) history.replaceState(null, '', '/');
+  if (params.get('requests')) setTimeout(() => openAdmin(), 700);
+  else if (params.get('parked')) setTimeout(() => parkHere(), 800); // z. B. aus einer Kurzbefehl-Automation beim Aussteigen
+  else if (params.get('park')) setTimeout(() => showParkPrompt(), 1200);
+  else if (params.get('car')) setTimeout(() => openCarSheet(), 600);
   if (rid) {
     fetchReport(rid).then((report) => {
       if (report && report.status === 'active') openReportDetail(report.id);
@@ -181,21 +211,21 @@ function openLocationHelp(denied) {
 function updateStatus() {
   const title = $('#status-title');
   const sub = $('#status-sub');
-  if (!state.online) { title.textContent = 'Don’t get busted'; sub.innerHTML = '<span class="dot off"></span>Verbinde…'; return; }
+  if (!state.online) { title.textContent = 'ParkCheck'; sub.innerHTML = '<span class="dot off"></span>Verbinde…'; return; }
   if (!state.pos) {
     const g = state.geoStatus;
     title.textContent = g === 'locating' ? 'Suche deinen Standort…' : g === 'denied' ? 'Standort blockiert' : g === 'unavailable' ? 'Standort nicht gefunden' : 'Standort freigeben';
-    sub.innerHTML = `<span class="dot off"></span>${g === 'locating' ? 'Einen Moment' : g === 'denied' || g === 'unavailable' ? 'Tippe hier für Hilfe' : 'Tippe hier, um Meldungen um dich zu sehen'}`;
+    sub.innerHTML = `<span class="dot off"></span>${g === 'locating' ? 'Einen Moment' : g === 'denied' || g === 'unavailable' ? 'Tippe hier für Hilfe' : 'Tippe hier, um Tickets um dich zu sehen'}`;
     return;
   }
   const near = [...state.reports.values()].filter((r) => !r.isMine).map((r) => ({ r, d: mapxDistance(state.pos, r) })).filter((x) => x.d <= 1000);
   if (!near.length) {
-    title.textContent = 'Alles ruhig';
-    sub.innerHTML = '<span class="dot"></span>Keine Meldung im Umkreis von 1 km';
+    title.textContent = 'Keine aktuellen Meldungen';
+    sub.innerHTML = '<span class="dot off"></span>Die Parkregeln gelten trotzdem';
     return;
   }
   const nearest = Math.min(...near.map((x) => x.d));
-  title.textContent = `${near.length} Meldung${near.length > 1 ? 'en' : ''} in deiner Nähe`;
+  title.textContent = `${near.length} Ticket${near.length > 1 ? 's' : ''} in deiner Nähe`;
   sub.innerHTML = `<span class="dot alert"></span>Nächste ${fmtDist(nearest)} entfernt`;
 }
 
@@ -207,6 +237,7 @@ function mapxDistance(a, b) {
 
 function logout() {
   startingFor = null;
+  hidePending();
   disconnectRealtime();
   closeAllSheets();
   state.reports.clear();

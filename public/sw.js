@@ -1,12 +1,12 @@
-// Don’t get busted Service Worker: App-Shell-Cache, Web-Push, Klick auf Benachrichtigungen
-const VERSION = 'pr-v2.2.0';
+// ParkCheck Service Worker: App-Shell-Cache, Web-Push, Klick auf Benachrichtigungen
+const VERSION = 'pr-v2.6.0';
 const SHELL = [
   '/',
   '/css/app.css',
   '/js/main.js', '/js/sb.js', '/js/ui.js', '/js/store.js', '/js/geo.js', '/js/geocode.js', '/js/map.js', '/js/actions.js',
   '/js/theme.js', '/js/push.js', '/js/realtime.js',
   '/js/views/auth.js', '/js/views/report.js', '/js/views/car.js', '/js/views/profile.js',
-  '/js/views/onboarding.js', '/js/views/alerts.js', '/js/views/legal.js',
+  '/js/views/onboarding.js', '/js/views/alerts.js', '/js/views/legal.js', '/js/views/street.js', '/js/views/parkprompt.js', '/js/views/pending.js', '/js/views/admin.js',
   '/vendor/leaflet/leaflet.css', '/vendor/leaflet/leaflet.js', '/vendor/supabase.js',
   '/vendor/maplibre/maplibre-gl.css', '/vendor/maplibre/maplibre-gl.js', '/vendor/maplibre/maplibre-gl-worker.js', '/vendor/maplibre/leaflet-maplibre-gl.js',
   '/icons/logo.svg', '/icons/icon-192.png', '/manifest.webmanifest',
@@ -50,7 +50,7 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('push', (event) => {
   let payload = {};
-  try { payload = event.data ? event.data.json() : {}; } catch { payload = { title: 'Don’t get busted', body: event.data?.text() }; }
+  try { payload = event.data ? event.data.json() : {}; } catch { payload = { title: 'ParkCheck', body: event.data?.text() }; }
   event.waitUntil((async () => {
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const visible = clients.find((c) => c.visibilityState === 'visible' && c.focused);
@@ -59,7 +59,7 @@ self.addEventListener('push', (event) => {
       visible.postMessage({ type: 'push', payload });
       return;
     }
-    await self.registration.showNotification(payload.title || 'Don’t get busted', {
+    await self.registration.showNotification(payload.title || 'ParkCheck', {
       body: payload.body || '',
       tag: payload.tag,
       renotify: true,

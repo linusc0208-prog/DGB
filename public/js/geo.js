@@ -1,4 +1,4 @@
-import { state, setState } from './store.js';
+import { state, setState, subscribe } from './store.js';
 import { distance } from './ui.js';
 
 // Fahrmodus: Ab ~20 km/h gilt man als fahrend (§ 23 Abs. 1c StVO – Warnfunktionen während der Fahrt
@@ -83,6 +83,21 @@ export async function requestPosition() {
   onPosition(pos);
   if (watchId == null) startGeo();
   return state.pos;
+}
+
+/** Möglichst genaue Position fürs Parken: wartet kurz auf GPS (≤ 40 m), sonst die beste bekannte */
+export function goodPosition({ maxAccuracy = 40, timeoutMs = 8000 } = {}) {
+  return new Promise((resolve, reject) => {
+    const ok = () => state.pos && state.pos.accuracy <= maxAccuracy && Date.now() - state.pos.ts < 30_000;
+    if (ok()) { resolve(state.pos); return; }
+    startGeo();
+    let un = () => {};
+    const t = setTimeout(() => {
+      un();
+      if (state.pos) resolve(state.pos); else requestPosition().then(resolve, reject);
+    }, timeoutMs);
+    un = subscribe(() => { if (ok()) { clearTimeout(t); un(); resolve(state.pos); } }, ['pos']);
+  });
 }
 
 export function setPassenger() {

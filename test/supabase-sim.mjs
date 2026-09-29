@@ -1,4 +1,4 @@
-// Nachbau der für Don’t get busted relevanten Supabase-Umgebung auf einer echten Postgres-Engine (PGlite),
+// Nachbau der für ParkCheck relevanten Supabase-Umgebung auf einer echten Postgres-Engine (PGlite),
 // damit schema.sql ohne Supabase-Konto getestet werden kann.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -96,9 +96,11 @@ export async function rpc(db, uid, name, args = {}) {
   return res.rows[0]?.data ?? null;
 }
 
-export async function signUp(db, email, name) {
+export async function signUp(db, email, name, { approved = true, admin = false } = {}) {
   const id = crypto.randomUUID();
   await db.query('insert into auth.users (id, email, raw_user_meta_data) values ($1, $2, $3)', [id, email, JSON.stringify({ name })]);
+  // Neue Konten warten auf Freigabe – für die meisten Tests direkt freischalten
+  if (approved || admin) await db.query(`update public.profiles set access = 'approved', is_admin = $2 where id = $1`, [id, admin]);
   return id;
 }
 
