@@ -29,7 +29,8 @@ const TEXTS = {
   privacy: {
     title: 'Datenschutz',
     body: `
-      <p><i>Kurzfassung – vor dem Livegang durch eine vollständige, geprüfte Datenschutzerklärung ersetzen.</i></p>
+      <h4>Verantwortlich</h4>
+      <p>Linus C.<br>E-Mail: <a href="mailto:linus.c0208@gmail.com">linus.c0208@gmail.com</a></p>
       <h4>Was wir speichern</h4>
       <ul>
         <li><b>Konto:</b> Vorname, E-Mail, Passwort (nur als sicherer Hash), Hinweis-Radius.</li>
@@ -37,12 +38,14 @@ const TEXTS = {
         <li><b>Meldungen:</b> Ort, Zeit, Art. Andere sehen nicht, wer gemeldet hat.</li>
         <li><b>Auto-Standort:</b> nur wenn du ihn speicherst, um dich informieren zu können. Nach 24 Stunden wird er für Hinweise nicht mehr genutzt.</li>
         <li><b>Parkschein:</b> nur Start- und Endzeit für Countdown und Erinnerung – kein Kennzeichen, keine Zahlungsdaten.</li>
-        <li><b>Push:</b> ein technischer Empfangs-Endpunkt deines Browsers.</li>
+        <li><b>Push:</b> ein technischer Empfangs-Endpunkt deines Browsers. Darüber bekommst du Hinweise, Erinnerungen und Mitteilungen der Betreiber zur App – keine Werbung. Abschalten jederzeit im Profil.</li>
       </ul>
       <h4>Was wir nicht speichern</h4>
-      <p>Deinen laufenden Standort. Er wird nur auf deinem Gerät verarbeitet, um die Karte zu zentrieren und Entfernungen zu berechnen.</p>
+      <p>Deinen laufenden Standort, deine Fahrstrecken und Geschwindigkeiten. Sie werden nur auf deinem Gerät verarbeitet, um die Karte zu zentrieren, Entfernungen zu berechnen und – falls eingeschaltet – das Parken zu erkennen.</p>
+      <h4>Automatische Park-Erkennung (nur wenn du sie einschaltest)</h4>
+      <p>Ist sie im Profil eingeschaltet, erkennt die App an der Geschwindigkeit auf deinem Gerät, wann du nach einer Fahrt angehalten hast. Nur dieser Haltepunkt wird als dein Parkplatz gespeichert und höchstens 24 Stunden für Hinweise genutzt. Es entsteht kein Bewegungsprofil. Ausschalten jederzeit im Profil; „Ich habe gar nicht geparkt“ löscht den Punkt sofort.</p>
       <h4>Wo die Daten liegen</h4>
-      <p>Datenbank und Login laufen bei Supabase, die App selbst wird über Vercel ausgeliefert. [Serverstandort/Region und Auftragsverarbeitungsverträge vor dem Livegang eintragen.]</p>
+      <p>Datenbank und Login laufen bei Supabase, die App selbst wird über Vercel ausgeliefert. Deine Daten werden nicht verkauft und nicht für Werbung genutzt.</p>
       <h4>Karte</h4>
       <p>Die Kartenbilder lädt dein Gerät direkt von OpenFreeMap (Kartendaten © OpenStreetMap-Mitwirkende). Dabei wird – technisch bedingt – die IP-Adresse deines Geräts übermittelt, aber kein Standort und kein Konto.</p>
       <h4>Straßennamen</h4>
@@ -51,11 +54,13 @@ const TEXTS = {
       <p>Im Profil kannst du jederzeit alle Daten exportieren (Art. 20 DSGVO) und dein Konto löschen (Art. 17 DSGVO). Deine Meldungen bleiben danach ohne Bezug zu dir erhalten.</p>`,
   },
   imprint: {
-    title: 'Impressum',
+    title: 'Kontakt',
     body: `
-      <p><i>Vor der Veröffentlichung ausfüllen (Pflicht nach § 5 DDG).</i></p>
-      <p>[Name / Firma]<br>[Straße Hausnummer]<br>[PLZ Ort]<br>E-Mail: [kontakt@…]</p>
-      <p>ParkCheck ist ein unabhängiges Angebot und steht in keiner Verbindung zu Ordnungsbehörden. „EasyPark“ ist eine Marke der EasyPark Group.</p>`,
+      <p>ParkCheck ist ein privates, nicht-kommerzielles Projekt für einen geschlossenen Nutzerkreis. Zugang gibt es nur auf Anfrage und nach Freigabe.</p>
+      <h4>Kontakt</h4>
+      <p>Linus C.<br>E-Mail: <a href="mailto:linus.c0208@gmail.com">linus.c0208@gmail.com</a></p>
+      <p>Fragen, Hinweise auf Fehler oder Wünsche zu deinen Daten gerne per E-Mail.</p>
+      <p class="small muted">ParkCheck ist ein unabhängiges Angebot und steht in keiner Verbindung zu Ordnungsbehörden oder zur EasyPark Group. „EasyPark“ ist eine Marke der EasyPark Group.</p>`,
   },
 };
 

@@ -97,6 +97,8 @@ svg.i.lg { width: 26px; height: 26px; }
 .req { border: 1px solid var(--border); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; }
 .req .note { background: var(--surface-2); border-radius: 10px; padding: 8px 10px; margin: 8px 0 0; font-size: 13.5px; white-space: pre-wrap; word-break: break-word; }
 .req .row { gap: 8px; margin-top: 10px; }
+.req.fresh { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.news-body { margin-top: 8px; white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
 .error-text { color: var(--danger); font-size: 13.5px; font-weight: 550; min-height: 1em; margin: 0 0 10px; }
 .check { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: var(--text-2); margin: 4px 0 14px; }
 .check input { width: 20px; height: 20px; accent-color: var(--primary); margin: 1px 0 0; flex: none; }

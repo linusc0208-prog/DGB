@@ -116,6 +116,8 @@ create table if not exists public.app_config (
 -- Erinnerung beim Parken (nachträglich ergänzt, deshalb als eigene Spalten)
 alter table public.profiles add column if not exists park_reminder  boolean not null default true;
 alter table public.cars     add column if not exists park_prompt_at timestamptz;
+-- Automatische Park-Erkennung (Geschwindigkeit, nur auf dem Gerät) – nur wenn der Nutzer sie einschaltet
+alter table public.profiles add column if not exists auto_park boolean not null default false;
 
 -- Zugang nur nach Freigabe. Wer beim Einführen schon ein Konto hatte, bleibt freigeschaltet.
 alter table public.profiles add column if not exists access text;
@@ -135,6 +137,20 @@ create or replace function public._approved()
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.profiles where id = auth.uid() and access = 'approved' and not banned)
 $$;
+
+-- Mitteilungen der Admins an alle Nutzer
+create table if not exists public.announcements (
+  id          bigint generated always as identity primary key,
+  title       text not null check (char_length(title) between 1 and 80),
+  body        text not null check (char_length(body) between 1 and 1000),
+  created_by  uuid references auth.users(id) on delete set null,
+  recipients  int  not null default 0,
+  created_at  timestamptz not null default now()
+);
+alter table public.announcements enable row level security;
+revoke insert, update, delete, truncate on public.announcements from anon, authenticated;
+drop policy if exists "Mitteilungen lesen" on public.announcements;
+create policy "Mitteilungen lesen" on public.announcements for select to authenticated using (public._approved());
 
 alter table public.profiles           enable row level security;
 alter table public.reports            enable row level security;
@@ -491,9 +507,10 @@ declare me public.profiles := public._me_any();
 begin
   return jsonb_build_object(
     'id', me.id, 'name', me.name, 'reputation', me.reputation, 'alert_radius', me.alert_radius,
-    'park_reminder', me.park_reminder, 'created_at', me.created_at,
+    'park_reminder', me.park_reminder, 'auto_park', me.auto_park, 'created_at', me.created_at,
     'access', me.access, 'is_admin', me.is_admin, 'access_note', me.access_note,
     'pending_count', case when me.is_admin then (select count(*) from public.profiles where access = 'pending') else null end,
+    'member_count', case when me.is_admin then (select count(*) from public.profiles where access = 'approved' and not banned) else null end,
     'confirmed', (select coalesce(sum(r.confirms), 0) from public.reports r
                   join public.report_authors a on a.report_id = r.id where a.user_id = me.id));
 end $$;
@@ -540,6 +557,15 @@ returns jsonb language plpgsql security definer set search_path = public as $$
 declare me public.profiles := public._me();
 begin
   update public.profiles set park_reminder = coalesce(p_on, true) where id = me.id;
+  return public.get_profile();
+end $$;
+
+-- Automatische Park-Erkennung an/aus (Einwilligung des Nutzers)
+create or replace function public.set_auto_park(p_on boolean)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare me public.profiles := public._me();
+begin
+  update public.profiles set auto_park = coalesce(p_on, false) where id = me.id;
   return public.get_profile();
 end $$;
 
@@ -661,6 +687,54 @@ begin
     update public.parking_sessions set status = 'stopped', stopped_at = now() where user_id = p_user and status = 'active';
   end if;
   return jsonb_build_object('id', p_user, 'access', p_access);
+end $$;
+
+-- ---------------------------------------------------------------------
+--  Mitteilungen: Admin schreibt, alle Freigeschalteten bekommen Push + sehen sie in der App
+-- ---------------------------------------------------------------------
+create or replace function public.admin_send_announcement(p_title text, p_body text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  me public.profiles := public._admin();
+  t text := btrim(coalesce(p_title, ''));
+  b text := btrim(coalesce(p_body, ''));
+  a public.announcements;
+  n int;
+begin
+  if char_length(t) not between 1 and 80 then raise exception 'Der Titel braucht 1 bis 80 Zeichen.'; end if;
+  if char_length(b) not between 1 and 1000 then raise exception 'Der Text braucht 1 bis 1000 Zeichen.'; end if;
+  if (select count(*) from public.announcements where created_at > now() - interval '1 hour') >= 10 then
+    raise exception 'Höchstens 10 Mitteilungen pro Stunde.';
+  end if;
+  insert into public.announcements (title, body, created_by) values (t, b, me.id) returning * into a;
+  insert into public.outbox (user_id, kind, payload)
+  select p.id, 'announcement', jsonb_build_object(
+    'type', 'announcement',
+    'title', '📣 ' || t,
+    'body', case when char_length(b) > 180 then left(b, 177) || '…' else b end,
+    'tag', 'announcement-' || a.id,
+    'url', '/?news=' || a.id,
+    'announcementId', a.id)
+  from public.profiles p
+  where p.access = 'approved' and not p.banned and p.id <> me.id;
+  get diagnostics n = row_count;
+  update public.announcements set recipients = n where id = a.id;
+  return jsonb_build_object('id', a.id, 'recipients', n);
+end $$;
+
+create or replace function public.announcements_list(p_limit int default 20)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare me public.profiles := public._me();
+begin
+  return coalesce((select jsonb_agg(jsonb_build_object('id', id, 'title', title, 'body', body, 'created_at', created_at) order by id desc)
+                     from (select * from public.announcements order by id desc limit least(greatest(coalesce(p_limit, 20), 1), 50)) x), '[]'::jsonb);
+end $$;
+
+create or replace function public.admin_delete_announcement(p_id bigint)
+returns void language plpgsql security definer set search_path = public as $$
+declare me public.profiles := public._admin();
+begin
+  delete from public.announcements where id = p_id;
 end $$;
 
 -- DSGVO: Datenexport (Art. 20) und Konto löschen (Art. 17)

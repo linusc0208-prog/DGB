@@ -17,6 +17,10 @@ export const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey,
 
 export class AppError extends Error {}
 
+let accessToken = null;
+export const setAccessToken = (t) => { accessToken = t || null; };
+export const getAccessToken = () => accessToken;
+
 /** Fehlermeldungen von Supabase in verständliches Deutsch übersetzen */
 export function friendly(error) {
   const msg = error?.message || String(error || '');
@@ -87,7 +91,9 @@ export function toUser(profile, authUser) {
     reputation: profile.reputation,
     alertRadius: profile.alert_radius,
     parkReminder: profile.park_reminder !== false,
-    access: profile.access || 'approved',
+    autoPark: !!profile.auto_park,
+    memberCount: Number(profile.member_count || 0),
+    access: profile.access || 'pending',
     isAdmin: !!profile.is_admin,
     accessNote: profile.access_note || '',
     pendingCount: Number(profile.pending_count || 0),

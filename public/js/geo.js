@@ -9,6 +9,9 @@ let fastCount = 0;
 let slowSince = 0;
 let watchId = null;
 let last = null;
+// Park-Erkennung: letzte Fahrt (≥ 20 km/h) und erster langsamer Punkt danach – bleibt auf dem Gerät
+let lastDriveAt = 0;
+let stop = null;
 
 function speedFrom(pos) {
   if (pos.coords.speed != null && !Number.isNaN(pos.coords.speed)) return pos.coords.speed;
@@ -38,6 +41,12 @@ function onPosition(pos) {
     fastCount = 0;
     slowSince ||= Date.now();
     if (Date.now() - slowSince > 20_000) driving = false;
+  }
+  if (speed > DRIVE_ON && (pos.coords.accuracy || 0) < 60) {
+    if (fastCount >= 2) lastDriveAt = Date.now();
+    stop = null;
+  } else if (lastDriveAt && speed < DRIVE_OFF && !stop) {
+    stop = { lat: p.lat, lng: p.lng, at: Date.now() };
   }
   if (Date.now() < state.passengerUntil) driving = false;
   setState({ pos: p, geoStatus: 'watching', driving });
@@ -99,6 +108,10 @@ export function goodPosition({ maxAccuracy = 40, timeoutMs = 8000 } = {}) {
     un = subscribe(() => { if (ok()) { clearTimeout(t); un(); resolve(state.pos); } }, ['pos']);
   });
 }
+
+/** Haltepunkt nach einer Fahrt (oder null) */
+export const stopCandidate = () => (stop && lastDriveAt ? { ...stop, drivenAt: lastDriveAt } : null);
+export function clearStop() { stop = null; lastDriveAt = 0; }
 
 export function setPassenger() {
   setState({ passengerUntil: Date.now() + 30 * 60_000, driving: false });

@@ -1,4 +1,4 @@
-import { sb } from './sb.js';
+import { sb, setAccessToken } from './sb.js';
 import { state, setState, subscribe, prefs } from './store.js';
 import * as mapx from './map.js';
 import { startGeo, requestPosition, isDrivingBlocked } from './geo.js';
@@ -15,9 +15,10 @@ import { openProfile } from './views/profile.js';
 import { maybeOnboard } from './views/onboarding.js';
 import { renderTop } from './views/alerts.js';
 import { refreshStreet, onReportChanged, renderStreet } from './views/street.js';
-import { showParkPrompt, parkHere, askParked } from './views/parkprompt.js';
+import { showParkPrompt, parkHere, checkAutoPark } from './views/parkprompt.js';
 import { showPending, hidePending } from './views/pending.js';
 import { openAdmin } from './views/admin.js';
+import { openNews, checkNews } from './views/news.js';
 
 let started = false;
 let firstFix = true;
@@ -28,6 +29,7 @@ initAuth((authUser) => startApp(authUser));
 // Anmeldestatus von Supabase: auch Klicks auf Bestätigungs- und Passwort-Links landen hier
 // (Keine Supabase-Aufrufe direkt im Callback – deshalb setTimeout)
 sb.auth.onAuthStateChange((event, session) => {
+  setAccessToken(session?.access_token);
   setTimeout(() => {
     if (event === 'PASSWORD_RECOVERY') openNewPassword();
     if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) startApp(session.user);
@@ -38,6 +40,7 @@ sb.auth.onAuthStateChange((event, session) => {
 (async function boot() {
   try {
     const { data } = await sb.auth.getSession();
+    setAccessToken(data.session?.access_token);
     if (data.session?.user) await startApp(data.session.user); else showAuth();
   } catch {
     showAuth();
@@ -81,6 +84,7 @@ async function startApp(authUser) {
   loadSession().then(() => promptHandoff()).catch(() => {});
   if (location.hash.includes('access_token')) history.replaceState(null, '', '/');
   setTimeout(maybeOnboard, 500);
+  if (!new URLSearchParams(location.search).get('news')) setTimeout(checkNews, 2000);
 }
 
 function setup() {
@@ -141,15 +145,13 @@ function setup() {
     $('#avatar-btn').textContent = initials(state.user?.name);
     renderTop();
   }, ['car', 'user', 'session']);
-  let wasDriving = false;
   subscribe(() => {
     $('#btn-report').classList.toggle('disabled', isDrivingBlocked());
     renderTop();
     renderStreet();
-    // Fahrt zu Ende (nicht durch Beifahrer-Modus) → "Geparkt?"
-    if (wasDriving && !state.driving && Date.now() > state.passengerUntil && document.visibilityState === 'visible') askParked();
-    wasDriving = state.driving;
   }, ['driving', 'passengerUntil']);
+  // Automatische Park-Erkennung (falls eingeschaltet): alle 10 Sekunden prüfen
+  setInterval(() => { if (document.visibilityState === 'visible') checkAutoPark(); }, 10_000);
 
   // Alter und Deckkraft regelmäßig auffrischen, abgelaufene Meldungen entfernen
   setInterval(() => { pruneReports(); mapx.renderReports([...state.reports.values()]); updateStatus(); }, 30_000);
@@ -163,8 +165,9 @@ function setup() {
   const params = new URLSearchParams(location.search);
   const rid = Number(params.get('report'));
   if (rid || params.get('car') || params.get('parked')) history.replaceState(null, '', '/');
-  if (params.get('requests')) history.replaceState(null, '', '/');
-  if (params.get('requests')) setTimeout(() => openAdmin(), 700);
+  if (params.get('requests') || params.get('news')) history.replaceState(null, '', '/');
+  if (params.get('news')) setTimeout(() => openNews(), 700);
+  else if (params.get('requests')) setTimeout(() => openAdmin(), 700);
   else if (params.get('parked')) setTimeout(() => parkHere(), 800); // z. B. aus einer Kurzbefehl-Automation beim Aussteigen
   else if (params.get('park')) setTimeout(() => showParkPrompt(), 1200);
   else if (params.get('car')) setTimeout(() => openCarSheet(), 600);

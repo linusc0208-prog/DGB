@@ -52,10 +52,20 @@ copy('node_modules/maplibre-gl/dist/maplibre-gl-csp-worker.js', 'vendor/maplibre
 copy('node_modules/maplibre-gl/dist/maplibre-gl.css', 'vendor/maplibre/maplibre-gl.css');
 copy('node_modules/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js', 'vendor/maplibre/leaflet-maplibre-gl.js');
 
+// Push-Schlüssel prüfen: gültig sind 87 Zeichen, die 65 Bytes ergeben und mit 0x04 beginnen
+let vapid = (env.VAPID_PUBLIC_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/=+$/, '');
+if (vapid) {
+  const raw = Buffer.from(vapid.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+  if (raw.length !== 65 || raw[0] !== 4 || !/^[A-Za-z0-9_-]+$/.test(vapid)) {
+    console.warn(`\n⚠ VAPID_PUBLIC_KEY ist ungültig (${vapid.length} statt 87 Zeichen). Mitteilungen bleiben aus, bis der Schlüssel in Vercel korrigiert ist.\n`);
+    vapid = '';
+  }
+}
+
 const config = {
   supabaseUrl: url,
   supabaseKey: key,
-  vapidPublicKey: (env.VAPID_PUBLIC_KEY || '').trim(),
+  vapidPublicKey: vapid,
   geocoderUrl: env.GEOCODER_URL || 'https://nominatim.openstreetmap.org',
   easyparkAndroidPackage: env.EASYPARK_ANDROID_PACKAGE || undefined,
   easyparkIosScheme: env.EASYPARK_IOS_SCHEME || undefined,

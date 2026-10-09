@@ -5,6 +5,7 @@ import { upsertRow, removeReport, loadReports, loadMe } from './actions.js';
 import { showCarAlert, showParkingReminder } from './views/alerts.js';
 import { showParkPrompt } from './views/parkprompt.js';
 import { openAdmin } from './views/admin.js';
+import { showAnnouncement } from './views/news.js';
 import { toast } from './ui.js';
 
 let lastRequestToast = 0;
@@ -24,6 +25,7 @@ function onOutbox(row) {
   else if (row.kind === 'parking_reminder') showParkingReminder(p);
   else if (row.kind === 'park_prompt') showParkPrompt(p);
   else if (row.kind === 'access_request') onAccessRequest(p);
+  else if (row.kind === 'announcement') showAnnouncement(p);
 }
 
 export function connectRealtime() {
@@ -66,4 +68,5 @@ navigator.serviceWorker?.addEventListener('message', (e) => {
   else if (payload.type === 'park_prompt') showParkPrompt(payload);
   else if (payload.type === 'access_request') onAccessRequest(payload);
   else if (payload.type === 'access_granted') window.dispatchEvent(new Event('pc:access'));
+  else if (payload.type === 'announcement') showAnnouncement(payload);
 });

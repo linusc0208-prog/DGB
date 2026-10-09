@@ -1,11 +1,12 @@
 import { state } from '../store.js';
-import { loadMe, setParkReminder } from '../actions.js';
+import { loadMe, setParkReminder, setAutoPark } from '../actions.js';
+import { openNews, openCompose } from './news.js';
 import { openAutomationHelp } from './parkprompt.js';
 import { openAdmin } from './admin.js';
 import { sb, rpc, friendly } from '../sb.js';
 import { pushStatus, enablePush, disablePush } from '../push.js';
 import { openLegal } from './legal.js';
-import { icon, esc, $, $$, openSheet, toast, withLoading, initials } from '../ui.js';
+import { icon, esc, $, $$, openSheet, toast, withLoading, initials, confirmDialog } from '../ui.js';
 
 export function openProfile({ onLogout }) {
   const u = state.user;
@@ -18,6 +19,8 @@ export function openProfile({ onLogout }) {
           <div class="small muted">${esc(u.email)}</div></div>
       </div>
       <div class="box ok"><span class="ico">${icon('shield')}</span><div class="grow small" data-stats>${statsHtml(u)}</div></div>
+      <button class="list-row" data-news><span class="ico">${icon('file')}</span><span class="grow"><b style="font-size:14.5px">Mitteilungen</b></span>${icon('chevron', 'sm')}</button>
+      ${u.isAdmin ? `<button class="list-row" data-compose><span class="ico">${icon('send')}</span><span class="grow"><b style="font-size:14.5px">Mitteilung senden</b></span>${icon('chevron', 'sm')}</button>` : ''}
       ${u.isAdmin ? `<button class="list-row" data-admin><span class="ico">${icon('users')}</span><span class="grow"><b style="font-size:14.5px">Zugangsanfragen</b></span>${u.pendingCount ? `<span class="badge" data-pending>${u.pendingCount}</span>` : ''}${icon('chevron', 'sm')}</button>` : ''}
 
       <div class="list-row"><span class="ico">${icon('bell')}</span>
@@ -26,10 +29,13 @@ export function openProfile({ onLogout }) {
       <div class="list-row"><span class="ico">${icon('ticket')}</span>
         <div class="grow"><b style="font-size:14.5px">Parkschein-Erinnerung</b><div class="small muted">Nach dem Parken: „Parkschein lösen?“</div></div>
         <label class="switch"><input type="checkbox" data-parkrem ${u.parkReminder ? 'checked' : ''} /><span></span></label></div>
+      <div class="list-row"><span class="ico">${icon('wheel')}</span>
+        <div class="grow"><b style="font-size:14.5px">Parken automatisch erkennen</b><div class="small muted">Nach einer Fahrt und 2 Min. Stillstand: „Parkschein gecheckt?“</div></div>
+        <label class="switch"><input type="checkbox" data-autopark ${u.autoPark ? 'checked' : ''} /><span></span></label></div>
       <button class="list-row" data-auto><span class="ico">${icon('car')}</span><span class="grow">Automatisch beim Aussteigen</span>${icon('chevron', 'sm')}</button>
       <button class="list-row" data-legal="terms"><span class="ico">${icon('info')}</span><span class="grow">Nutzungsbedingungen</span>${icon('chevron', 'sm')}</button>
       <button class="list-row" data-legal="privacy"><span class="ico">${icon('shield')}</span><span class="grow">Datenschutz</span>${icon('chevron', 'sm')}</button>
-      <button class="list-row" data-legal="imprint"><span class="ico">${icon('file')}</span><span class="grow">Impressum</span>${icon('chevron', 'sm')}</button>
+      <button class="list-row" data-legal="imprint"><span class="ico">${icon('user')}</span><span class="grow">Kontakt</span>${icon('chevron', 'sm')}</button>
       <button class="list-row" data-export><span class="ico">${icon('download')}</span><span class="grow">Meine Daten exportieren</span>${icon('chevron', 'sm')}</button>
       <button class="list-row" data-logout><span class="ico">${icon('logout')}</span><span class="grow">Abmelden</span>${icon('chevron', 'sm')}</button>
       <button class="list-row danger" data-delete><span class="ico">${icon('trash')}</span><span class="grow">Konto löschen</span>${icon('chevron', 'sm')}</button>`,
@@ -42,6 +48,18 @@ export function openProfile({ onLogout }) {
       };
       $('[data-auto]', el).onclick = () => openAutomationHelp();
       $('[data-admin]', el)?.addEventListener('click', () => openAdmin());
+      $('[data-news]', el).onclick = () => openNews();
+      $('[data-compose]', el)?.addEventListener('click', () => openCompose());
+      $('[data-autopark]', el).onchange = async (e) => {
+        const box = e.currentTarget;
+        const on = box.checked;
+        if (on && !(await confirmDialog({
+          title: 'Parken automatisch erkennen?',
+          text: 'Solange die App offen ist, erkennt sie an der Geschwindigkeit, wann du nach einer Fahrt geparkt hast, und fragt dann „Parkschein gecheckt?“. Geschwindigkeit und Strecke werden nur auf deinem Handy ausgewertet. Gespeichert wird nur der Punkt, an dem du angehalten hast – als dein Parkplatz, höchstens 24 Stunden. Du kannst das jederzeit wieder ausschalten.',
+          confirm: 'Einschalten',
+        }))) { box.checked = false; return; }
+        try { await setAutoPark(on); toast(on ? 'Park-Erkennung an.' : 'Park-Erkennung aus.', { type: 'ok', duration: 2000 }); } catch (err) { box.checked = !on; toast(err.message, { type: 'err' }); }
+      };
       // Zahlen frisch laden (Bestätigungen kommen laufend dazu)
       loadMe().then((fresh) => { const box = $('[data-stats]', el); if (box) box.innerHTML = statsHtml(fresh); }).catch(() => {});
       $$('[data-legal]', el).forEach((b) => { b.onclick = () => openLegal(b.dataset.legal); });

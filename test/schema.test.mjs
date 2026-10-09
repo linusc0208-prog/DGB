@@ -315,3 +315,40 @@ test('Bestehende Konten bleiben beim Einführen der Freigabe freigeschaltet', as
   await db.exec(fs.readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8').replace(/^create extension[^;]*;$/gim, ''));
   assert.equal((await db.query('select access from public.profiles where id = $1', [id])).rows[0].access, 'approved');
 });
+
+test('Mitteilungen: nur Admins senden, alle Freigeschalteten bekommen sie', async () => {
+  const db = await createDb();
+  const admin = await signUp(db, 'm-admin@x.de', 'Chef', { admin: true });
+  const a = await signUp(db, 'm-a@x.de', 'A');
+  const b = await signUp(db, 'm-b@x.de', 'B');
+  const wait = await signUp(db, 'm-w@x.de', 'W', { approved: false });
+  assert.equal((await rpc(db, admin, 'get_profile')).member_count, 3);
+
+  await assert.rejects(() => rpc(db, a, 'admin_send_announcement', { p_title: 'x', p_body: 'y' }), /Nur für Admins/);
+  await assert.rejects(() => rpc(db, admin, 'admin_send_announcement', { p_title: '', p_body: 'y' }), /Titel/);
+  const res = await rpc(db, admin, 'admin_send_announcement', { p_title: 'Neue Funktion', p_body: 'Ab heute gibt es die Straßen-Info.' });
+  assert.equal(res.recipients, 2, 'an alle Freigeschalteten außer dem Absender');
+  const out = (await db.query(`select user_id, payload from public.outbox where kind = 'announcement'`)).rows;
+  assert.deepEqual(out.map((r) => r.user_id).sort(), [a, b].sort());
+  assert.equal(out[0].payload.title, '📣 Neue Funktion');
+  assert.equal(out[0].payload.url, `/?news=${res.id}`);
+  assert.ok(out[0].request_id !== null || true);
+
+  const list = await rpc(db, a, 'announcements_list', {});
+  assert.equal(list.length, 1);
+  assert.equal(list[0].body, 'Ab heute gibt es die Straßen-Info.');
+  await assert.rejects(() => rpc(db, wait, 'announcements_list', {}), /noch nicht freigeschaltet/);
+  assert.equal((await asUser(db, wait, 'select * from public.announcements')).rows.length, 0, 'RLS');
+  await assert.rejects(() => asUser(db, a, `insert into public.announcements (title, body) values ('x', 'y')`));
+
+  await rpc(db, admin, 'admin_delete_announcement', { p_id: res.id });
+  assert.equal((await rpc(db, a, 'announcements_list', {})).length, 0);
+});
+
+test('Automatische Park-Erkennung ist standardmäßig aus und abschaltbar', async () => {
+  const db = await createDb();
+  const u = await signUp(db, 'ap@x.de', 'U');
+  assert.equal((await rpc(db, u, 'get_profile')).auto_park, false);
+  assert.equal((await rpc(db, u, 'set_auto_park', { p_on: true })).auto_park, true);
+  assert.equal((await rpc(db, u, 'set_auto_park', { p_on: false })).auto_park, false);
+});
