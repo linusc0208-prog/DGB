@@ -8,7 +8,7 @@ import { openReportDetail } from './report.js';
 
 const shown = new Set();
 
-/** Großer Alarm: Ordnungsamt in der Nähe des eigenen Autos */
+/** Großer Hinweis: In der Nähe des eigenen Autos wurde ein Ticket gemeldet */
 export function showCarAlert(p) {
   if (shown.has(p.tag)) return;
   shown.add(p.tag);
@@ -19,11 +19,11 @@ export function showCarAlert(p) {
   $('.alarm')?.remove();
   const parking = !!state.session;
   const el = html(`
-    <div class="alarm" role="alertdialog" aria-label="Warnung">
+    <div class="alarm" role="alertdialog" aria-label="Hinweis">
       <div class="alarm-card">
         <div class="alarm-top">
-          <div class="ico">${icon('siren', 'lg')}</div>
-          <div><b>${esc(p.title.replace(/^⚠️\s*/, ''))}</b><small>${p.street ? `${esc(p.street)} · gerade gemeldet` : 'Gerade gemeldet'}</small></div>
+          <div class="ico">${icon('slip', 'lg')}</div>
+          <div><b>${esc(p.title.replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, ''))}</b><small>${p.street ? `${esc(p.street)} · ` : ''}Prüfe, ob dein Parkschein gilt.</small></div>
         </div>
         <div class="alarm-body">
           ${parking
@@ -59,7 +59,7 @@ export function renderTop() {
   // Fahrmodus
   const drive = $('#drive-bar');
   drive.innerHTML = isDrivingBlocked()
-    ? `<div class="drive glass"><span class="ico">${icon('wheel')}</span><div class="grow"><b>Fahrmodus</b> – Melden & Warnungen pausiert</div><button class="btn sm" data-passenger>Beifahrer</button></div>`
+    ? `<div class="drive glass"><span class="ico">${icon('wheel')}</span><div class="grow"><b>Fahrmodus</b> – Melden & Hinweise pausiert</div><button class="btn sm" data-passenger>Beifahrer</button></div>`
     : '';
   $('[data-passenger]', drive)?.addEventListener('click', () => { setPassenger(); toast('Beifahrer-Modus für 30 Minuten.'); });
 
@@ -71,23 +71,16 @@ export function renderTop() {
   const radius = state.user?.alertRadius || 300;
   const near = car ? nearestReport(car, radius) : null;
   const timer = s ? `<span class="pill timer">${icon('timer', 'sm')}<span data-left>${fmtDuration(s.endsAt - Date.now())}</span></span>` : '';
-  let cls = 'ok';
-  let title = 'Dein Auto · alles ruhig';
-  let sub = car ? `${car.street ? `${esc(car.street)} · ` : ''}Warnung im Umkreis von ${radius} m` : '';
-  let action = timer;
+  let cls = s ? 'parking' : 'todo';
+  let title = s ? 'Parkschein läuft' : 'Parkschein?';
+  let sub = car ? `${car.street ? `${esc(car.street)} · ` : ''}${s ? 'Countdown & Erinnerung aktiv' : 'noch keiner erfasst'}` : 'über EasyPark';
+  let action = timer || `<span class="pill" data-park>${icon('ticket', 'sm')}Parkschein</span>`;
   if (near) {
     cls = 'alert';
     title = `${fmtDist(near.d)} vom Auto`;
-    sub = `${esc(near.kindLabel)}${near.street ? ` · ${esc(near.street)}` : ''} · ${timeAgo(near.createdAt)}`;
-    action = timer || `<span class="pill" data-park>${icon('ticket', 'sm')}Parkschein</span>`;
-  } else if (!car && s) {
-    cls = 'parking';
-    title = 'Parkschein läuft';
-    sub = 'über EasyPark';
-  } else if (s) {
-    cls = 'parking';
+    sub = [near.kind === 'tow' ? 'Abschleppen gemeldet' : 'Ticket gemeldet', near.kind === 'foot' || near.kind === 'car' ? esc(near.kindLabel) : null, near.street ? esc(near.street) : null, timeAgo(near.createdAt)].filter(Boolean).join(' · ');
   }
-  bar.innerHTML = `<button class="carbar glass ${cls}"><span class="ico">${icon(near ? 'siren' : s ? 'parking' : 'car')}</span>
+  bar.innerHTML = `<button class="carbar glass ${cls}"><span class="ico">${icon(near ? 'slip' : s ? 'parking' : 'car')}</span>
     <span class="grow"><b>${title}</b><small>${sub}</small></span>${action}</button>`;
   $('.carbar', bar).onclick = (e) => {
     if (e.target.closest('[data-park]')) startParking(); else openCarSheet();

@@ -1,4 +1,4 @@
-/* ============ ParkRadar – schlankes Design-System ============ */
+/* ============ ParkCheck – schlankes Design-System ============ */
 :root {
   --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --safe-top: env(safe-area-inset-top, 0px);
@@ -91,6 +91,14 @@ svg.i.lg { width: 26px; height: 26px; }
 .field > span { font-size: 13px; font-weight: 600; color: var(--text-2); }
 .field input { width: 100%; min-height: 50px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface-2); outline: none; }
 .field input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); background: var(--surface); }
+.field textarea { width: 100%; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface-2); outline: none; font: inherit; color: inherit; resize: vertical; }
+.field textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); background: var(--surface); }
+.badge { flex: none; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: var(--danger); color: #fff; font-size: 12.5px; font-weight: 750; display: inline-grid; place-items: center; margin-right: 4px; }
+.req { border: 1px solid var(--border); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; }
+.req .note { background: var(--surface-2); border-radius: 10px; padding: 8px 10px; margin: 8px 0 0; font-size: 13.5px; white-space: pre-wrap; word-break: break-word; }
+.req .row { gap: 8px; margin-top: 10px; }
+.req.fresh { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.news-body { margin-top: 8px; white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
 .error-text { color: var(--danger); font-size: 13.5px; font-weight: 550; min-height: 1em; margin: 0 0 10px; }
 .check { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: var(--text-2); margin: 4px 0 14px; }
 .check input { width: 20px; height: 20px; accent-color: var(--primary); margin: 1px 0 0; flex: none; }
@@ -133,6 +141,7 @@ svg.i.lg { width: 26px; height: 26px; }
 /* ---------- App ---------- */
 .app { position: fixed; inset: 0; }
 #map { position: absolute; inset: 0; z-index: 0; background: var(--surface-2); }
+#map.dark-tiles .leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
 .leaflet-container { font-family: var(--font); background: var(--surface-2); }
 .leaflet-control-attribution { font-size: 10px !important; }
 .leaflet-bottom.leaflet-right { bottom: calc(92px + var(--safe-bottom)); }
@@ -143,7 +152,7 @@ svg.i.lg { width: 26px; height: 26px; }
 .status { display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 8px; border-radius: 19px; }
 .status img { width: 38px; height: 38px; border-radius: 12px; flex: none; }
 .status .t { flex: 1; min-width: 0; line-height: 1.2; border: 0; background: none; text-align: left; padding: 0; }
-.status b { display: block; font-size: 15px; letter-spacing: -.02em; }
+.status b { display: block; font-size: 15px; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .status small { color: var(--muted); font-size: 12.5px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--ok); }
 .dot.alert { background: var(--danger); box-shadow: 0 0 0 0 rgba(239,68,68,.6); animation: live 1.6s infinite; }
@@ -156,11 +165,22 @@ svg.i.lg { width: 26px; height: 26px; }
 .carbar .ico { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; flex: none; background: var(--ok-soft); color: var(--ok); }
 .carbar.alert .ico { background: var(--danger-soft); color: var(--danger); }
 .carbar.parking .ico { background: var(--ep-soft); color: var(--ep); }
+.carbar.todo .ico { background: var(--warn-soft); color: var(--warn); }
 .carbar b { display: block; font-size: 14.5px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .carbar small { display: block; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .carbar.alert b { color: var(--danger); }
 .carbar .pill { flex: none; border-radius: 12px; padding: 9px 12px; font-weight: 700; font-size: 13.5px; background: var(--ep); color: #fff; display: inline-flex; gap: 6px; align-items: center; }
 .carbar .pill.timer { background: var(--ep-soft); color: var(--ep); font-variant-numeric: tabular-nums; }
+.streetbar { display: flex; align-items: center; gap: 10px; padding: 7px 10px 7px 8px; border-radius: 16px; width: 100%; text-align: left; color: var(--muted); animation: drop .35s var(--ease); }
+.streetbar .ico { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; flex: none; background: var(--surface-2); color: var(--text); }
+.streetbar.hot .ico { background: var(--warn-soft); color: var(--warn); }
+.streetbar .grow { min-width: 0; line-height: 1.2; }
+.streetbar b { display: block; font-size: 13.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.streetbar small { display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.stat-grid div { background: var(--surface-2); border-radius: 14px; padding: 12px 8px; text-align: center; }
+.stat-grid b { display: block; font-size: 24px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.stat-grid span { font-size: 12.5px; color: var(--muted); }
 .drive { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 16px; font-size: 13.5px; }
 .drive .ico { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--warn-soft); color: var(--warn); flex: none; }
 @keyframes drop { from { transform: translateY(-8px); opacity: 0; } }

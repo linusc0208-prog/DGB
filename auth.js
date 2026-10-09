@@ -28,7 +28,7 @@ export function initAuth(onLoggedIn) {
     $$('[data-auth-mode]', root).forEach((b) => b.classList.toggle('on', b.dataset.authMode === m));
     $$('.register-only', root).forEach((el) => el.classList.toggle('hidden', m !== 'register'));
     $$('.login-only', root).forEach((el) => el.classList.toggle('hidden', m !== 'login'));
-    submit.textContent = m === 'login' ? 'Anmelden' : 'Konto erstellen';
+    submit.textContent = m === 'login' ? 'Anmelden' : 'Anfrage senden';
     pw.autocomplete = m === 'login' ? 'current-password' : 'new-password';
     err.textContent = '';
     info.classList.add('hidden');
@@ -50,7 +50,7 @@ export function initAuth(onLoggedIn) {
     if (mode === 'register') {
       if (name.length < 2) { err.textContent = 'Bitte gib deinen Vornamen ein.'; return; }
       if (password.length < 8) { err.textContent = 'Das Passwort braucht mindestens 8 Zeichen.'; return; }
-      if (fd.get('acceptTerms') !== 'on') { err.textContent = 'Bitte akzeptiere die Nutzungshinweise.'; return; }
+      if (fd.get('acceptTerms') !== 'on') { err.textContent = 'Bitte akzeptiere die Nutzungsbedingungen.'; return; }
     }
 
     submit.disabled = true;
@@ -77,7 +77,7 @@ export function initAuth(onLoggedIn) {
           onLoggedIn(data.session.user, true);
         } else {
           // E-Mail-Bestätigung ist in Supabase aktiv
-          info.innerHTML = `${icon('check')}<div><b>Fast geschafft!</b> Wir haben dir eine E-Mail an <b>${esc(email)}</b> geschickt. Tippe auf den Link darin – dann bist du angemeldet.</div>`;
+          info.innerHTML = `${icon('check')}<div><b>Fast geschafft!</b> Wir haben dir eine E-Mail an <b>${esc(email)}</b> geschickt. Tippe auf den Link darin. Danach prüfen wir deine Anfrage und schalten dich frei.</div>`;
           info.classList.remove('hidden');
           setMode('login');
           info.classList.remove('hidden');

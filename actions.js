@@ -1,5 +1,5 @@
 // Datenzugriffe (Supabase), die von mehreren Ansichten genutzt werden.
-import { sb, rpc, toReport, toCar, toSession, toUser, cfg, AppError, friendly } from './sb.js';
+import { sb, rpc, toReport, toCar, toSession, toUser, cfg, AppError, friendly, getAccessToken } from './sb.js';
 import { state, setState, emitReports } from './store.js';
 import * as mapx from './map.js';
 import { distance } from './ui.js';
@@ -85,6 +85,40 @@ export async function saveCar(pos) {
   setState({ car });
   return car;
 }
+/**
+ * Auto speichern, während die App gerade in den Hintergrund geht (Handy gesperrt).
+ * keepalive sorgt dafür, dass die Anfrage auch dann noch ankommt.
+ */
+export async function saveCarKeepalive(pos) {
+  const token = getAccessToken();
+  if (!token || !cfg.supabaseUrl) return;
+  const street = await streetAt(pos, 400);
+  try {
+    await fetch(`${cfg.supabaseUrl}/rest/v1/rpc/set_car`, {
+      method: 'POST',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json', apikey: cfg.supabaseKey, Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ p_lat: pos.lat, p_lng: pos.lng, p_street: street }),
+    });
+  } catch { /* nächster Versuch beim nächsten Halt */ }
+}
+
+/** Automatische Park-Erkennung an/aus */
+export async function setAutoPark(on) {
+  const user = toUser(await rpc('set_auto_park', { p_on: !!on }), state.authUser);
+  setState({ user });
+  return user;
+}
+
+/** Erinnerung beim Parken an/aus */
+export async function setParkReminder(on) {
+  const user = toUser(await rpc('set_park_reminder', { p_on: !!on }), state.authUser);
+  setState({ user });
+  return user;
+}
+/** Für den aktuellen Parkplatz keine Parkschein-Erinnerung mehr schicken */
+export const dismissParkPrompt = () => rpc('dismiss_park_prompt').catch(() => {});
+
 export async function removeCar() {
   await rpc('remove_car');
   setState({ car: null });

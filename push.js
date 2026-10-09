@@ -34,13 +34,25 @@ export async function pushStatus() {
 }
 
 export async function enablePush() {
-  if (!pushSupported()) throw new Error(isIOS() ? 'Auf dem iPhone: Teilen → „Zum Home-Bildschirm“, dann ParkRadar von dort öffnen.' : 'Dein Browser unterstützt keine Push-Benachrichtigungen.');
+  if (!pushSupported()) throw new Error(isIOS() ? 'Auf dem iPhone: Teilen → „Zum Home-Bildschirm“, dann ParkCheck von dort öffnen.' : 'Dein Browser unterstützt keine Push-Benachrichtigungen.');
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') throw new Error('Benachrichtigungen wurden nicht erlaubt.');
   const reg = registration || (await navigator.serviceWorker.ready);
-  if (!cfg.vapidPublicKey) throw new Error('Push ist noch nicht eingerichtet (VAPID_PUBLIC_KEY fehlt).');
+  if (!cfg.vapidPublicKey) throw new Error('Mitteilungen sind noch nicht eingerichtet: Der Push-Schlüssel (VAPID_PUBLIC_KEY in Vercel) fehlt oder ist fehlerhaft.');
+  const key = urlBase64ToUint8Array(cfg.vapidPublicKey);
+  if (key.length !== 65 || key[0] !== 4) throw new Error('Der Push-Schlüssel (VAPID_PUBLIC_KEY in Vercel) ist unvollständig. Bitte dort prüfen.');
   let sub = await reg.pushManager.getSubscription();
-  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(cfg.vapidPublicKey) });
+  // Altes Abo mit anderem Schlüssel (z. B. nach Schlüsselwechsel) ersetzen
+  const old = sub?.options?.applicationServerKey;
+  if (sub && old && (old.byteLength !== key.length || new Uint8Array(old).some((b, i) => b !== key[i]))) { await sub.unsubscribe().catch(() => {}); sub = null; }
+  if (!sub) {
+    try {
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+    } catch (e) {
+      if (/applicationServerKey|InvalidAccess/i.test(`${e.name} ${e.message}`)) throw new Error('Der Push-Schlüssel wurde vom Handy abgelehnt. Bitte VAPID_PUBLIC_KEY in Vercel prüfen.');
+      throw new Error(`Mitteilungen konnten nicht eingeschaltet werden (${e.message || e.name}).`);
+    }
+  }
   const json = sub.toJSON();
   await rpc('save_push_subscription', { p_endpoint: json.endpoint, p_p256dh: json.keys.p256dh, p_auth: json.keys.auth });
   return true;

@@ -14,6 +14,10 @@ update public.profiles set is_admin = true, access = 'approved'
 returning name, access, is_admin;
 ```
 
+**Mitteilungen:** Admins schreiben unter **Profil → Mitteilung senden** an alle freigeschalteten Nutzer (Push + Liste unter **Profil → Mitteilungen**; verpasste Mitteilungen erscheinen beim nächsten Öffnen). Nur Infos zur App, keine Werbung.
+
+**Automatische Park-Erkennung (Opt-in):** Schalter im Profil, standardmäßig aus, mit Einwilligungstext. Nach einer Fahrt (≥ 20 km/h) und 2 Minuten Stillstand fragt die App leise „Parkschein gecheckt?“ und speichert den Haltepunkt als Parkplatz. Wird das Handy kurz nach dem Anhalten gesperrt, sichert die App den Haltepunkt per `keepalive`, und der Server erinnert 3 Minuten später per Push. Geschwindigkeit und Strecke bleiben auf dem Gerät. Funktioniert nur, solange die App geöffnet ist (Web-Apps bekommen im Hintergrund keinen Standort).
+
 **Parkschein-Erinnerung:** Wer sein Auto abstellt, wird gefragt „Parkschein gecheckt?“ (lösen, „Schon gelöst“ mit Countdown oder „Hier nicht nötig“): direkt nach „Hier geparkt“, wenn die App ein Fahrt-Ende erkennt, über den Link `/?parked=1` (z. B. per Kurzbefehl-Automation, wenn sich das Handy vom Auto trennt) und per Push 3 Minuten nach dem Abstellen, falls noch kein Parkschein läuft. „Hier nicht nötig“ und ein Schalter im Profil schalten sie ab.
 
 Technik: **Supabase** (Datenbank, Login, Live-Updates, Push-Funktion, Zeitsteuerung) · **Vercel** (liefert die App aus) · **GitHub** (Code, automatische Veröffentlichung).
@@ -67,7 +71,7 @@ EasyPark hat keine öffentliche API zum Starten von Parkvorgängen. ParkCheck ö
 
 - [ ] Eigenen E-Mail-Dienst (SMTP, z. B. Resend) in Supabase eintragen und „Confirm email“ wieder einschalten
 - [ ] Bezahlte Tarife: Supabase (kostenlose Projekte pausieren nach 7 Tagen wenig Aktivität), Vercel Pro (Hobby ist nur für nicht-kommerzielle Projekte)
-- [ ] Datenschutzerklärung und Impressum ausfüllen (`public/js/views/legal.js`)
+- [x] Kontakt und Verantwortlicher im Datenschutz eingetragen (privater Kreis, `public/js/views/legal.js`). Wird die App öffentlich oder kommerziell: vollständiges Impressum (Name, Anschrift, E-Mail) ergänzen
 - [ ] Rechtliche Prüfung (StVO § 23 Abs. 1c, Nennung der Marke EasyPark)
 - [ ] Karte: kommt von OpenFreeMap (ohne Key, ohne Limit, kommerziell erlaubt). Für eine Verfügbarkeitsgarantie später selbst hosten oder einen Anbieter mit Vertrag nehmen
 - [ ] Straßennamen: Nominatim erlaubt höchstens 1 Anfrage pro Sekunde über alle Nutzer. Bei vielen Nutzern eigenen Geodienst verwenden (`GEOCODER_URL` setzen und die Domain in `vercel.json` unter `connect-src` ergänzen)

@@ -10,7 +10,18 @@ const PUB = path.join(ROOT, 'public');
 try { process.loadEnvFile?.(path.join(ROOT, '.env')); } catch { /* keine .env */ }
 const env = process.env;
 
-const url = (env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/\/$/, '');
+let url = (env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+// Nachsichtig: nur die Projekt-ID oder ohne https:// eingetragen → vollständige Adresse daraus machen
+if (/^[a-z0-9]{15,30}$/.test(url)) url = `https://${url}.supabase.co`;
+else if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`;
+url = url.replace(/\/(rest|auth)\/v1.*$/, '');
+if (url) {
+  try { new URL(url); } catch {
+    console.error(`\n✖ SUPABASE_URL ist keine gültige Adresse: "${url}"`);
+    console.error('  Richtig ist z. B. https://abcdefghijkl.supabase.co\n');
+    process.exit(1);
+  }
+}
 const key = (env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY
   || env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
 
@@ -34,11 +45,27 @@ const copy = (from, to) => fs.cpSync(path.join(ROOT, from), path.join(PUB, to), 
 fs.mkdirSync(path.join(PUB, 'vendor'), { recursive: true });
 copy('node_modules/leaflet/dist', 'vendor/leaflet');
 copy('node_modules/@supabase/supabase-js/dist/umd/supabase.js', 'vendor/supabase.js');
+// Karte: MapLibre (CSP-Variante mit eigener Worker-Datei) + Brücke zu Leaflet
+fs.mkdirSync(path.join(PUB, 'vendor/maplibre'), { recursive: true });
+copy('node_modules/maplibre-gl/dist/maplibre-gl-csp.js', 'vendor/maplibre/maplibre-gl.js');
+copy('node_modules/maplibre-gl/dist/maplibre-gl-csp-worker.js', 'vendor/maplibre/maplibre-gl-worker.js');
+copy('node_modules/maplibre-gl/dist/maplibre-gl.css', 'vendor/maplibre/maplibre-gl.css');
+copy('node_modules/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js', 'vendor/maplibre/leaflet-maplibre-gl.js');
+
+// Push-Schlüssel prüfen: gültig sind 87 Zeichen, die 65 Bytes ergeben und mit 0x04 beginnen
+let vapid = (env.VAPID_PUBLIC_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/=+$/, '');
+if (vapid) {
+  const raw = Buffer.from(vapid.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+  if (raw.length !== 65 || raw[0] !== 4 || !/^[A-Za-z0-9_-]+$/.test(vapid)) {
+    console.warn(`\n⚠ VAPID_PUBLIC_KEY ist ungültig (${vapid.length} statt 87 Zeichen). Mitteilungen bleiben aus, bis der Schlüssel in Vercel korrigiert ist.\n`);
+    vapid = '';
+  }
+}
 
 const config = {
   supabaseUrl: url,
   supabaseKey: key,
-  vapidPublicKey: (env.VAPID_PUBLIC_KEY || '').trim(),
+  vapidPublicKey: vapid,
   geocoderUrl: env.GEOCODER_URL || 'https://nominatim.openstreetmap.org',
   easyparkAndroidPackage: env.EASYPARK_ANDROID_PACKAGE || undefined,
   easyparkIosScheme: env.EASYPARK_IOS_SCHEME || undefined,
@@ -48,5 +75,5 @@ fs.writeFileSync(path.join(PUB, 'config.js'),
   `// Automatisch erzeugt von scripts/build.mjs – nicht von Hand bearbeiten\nwindow.PARKRADAR_CONFIG = ${JSON.stringify(config, null, 2)};\n`);
 
 const missing = [!url && 'SUPABASE_URL', !key && 'SUPABASE_PUBLISHABLE_KEY', !config.vapidPublicKey && 'VAPID_PUBLIC_KEY'].filter(Boolean);
-console.log('✔ ParkRadar gebaut (public/)');
+console.log('✔ ParkCheck gebaut (public/)');
 if (missing.length) console.warn(`⚠ Noch nicht gesetzt: ${missing.join(', ')} – siehe Anleitung.`);

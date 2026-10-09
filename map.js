@@ -1,16 +1,21 @@
-/* global L */
+/* global L, maplibregl */
 import { icon, KIND } from './ui.js';
 
-const TILES = {
-  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+// Karte von OpenFreeMap: kostenlos, ohne API-Key, ohne Anmeldung (https://openfreemap.org)
+const STYLES = {
+  light: 'https://tiles.openfreemap.org/styles/positron',
+  dark: 'https://tiles.openfreemap.org/styles/dark',
 };
-const ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+// Notlösung für Geräte ohne WebGL: einfache OpenStreetMap-Kacheln
+const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 const COLORS = { patrol: '#f97316', foot: '#f97316', car: '#ef4444', tow: '#a855f7' };
 const AREA_M = 100; // Meldung = Bereich, nicht exakter Punkt
 
 let map;
-let tiles;
+let base; // Hintergrundkarte (Vektor über MapLibre oder Kacheln)
+let baseIsGl = false;
+let styleNow;
 let meMarker;
 let meCircle;
 let carMarker;
@@ -27,7 +32,7 @@ export function initMap(el, opts = {}) {
     maxZoom: 19,
     minZoom: 6,
   });
-  tiles = L.tileLayer(TILES.light, { attribution: ATTR, subdomains: 'abcd', maxZoom: 20, detectRetina: true }).addTo(map);
+  addBase(!!window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   let t;
   map.on('moveend', () => { clearTimeout(t); t = setTimeout(() => handlers.onMoveEnd?.(), 300); });
   return map;
@@ -39,7 +44,37 @@ export function viewRadius() {
   const c = map.getCenter();
   return Math.round(Math.min(20000, Math.max(1500, c.distanceTo(map.getBounds().getNorthEast()) * 1.15)));
 }
-export const setMapTheme = (dark) => tiles?.setUrl(dark ? TILES.dark : TILES.light);
+function hasWebGL() {
+  try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; }
+}
+
+function addBase(dark) {
+  const style = dark ? STYLES.dark : STYLES.light;
+  if (window.maplibregl && L.maplibreGL && hasWebGL()) {
+    try {
+      maplibregl.setWorkerUrl('/vendor/maplibre/maplibre-gl-worker.js');
+      base = L.maplibreGL({ style }).addTo(map);
+      baseIsGl = true;
+      styleNow = style;
+      return;
+    } catch (e) {
+      console.warn('Vektorkarte nicht möglich, nutze einfache Kacheln', e);
+      try { base?.remove(); } catch { /* */ }
+    }
+  }
+  base = L.tileLayer(OSM_TILES, { attribution: OSM_ATTR, maxZoom: 19 }).addTo(map);
+  baseIsGl = false;
+  map.getContainer().classList.toggle('dark-tiles', dark);
+}
+
+export function setMapTheme(dark) {
+  if (!base) return;
+  if (!baseIsGl) { map.getContainer().classList.toggle('dark-tiles', dark); return; }
+  const style = dark ? STYLES.dark : STYLES.light;
+  if (style === styleNow) return;
+  styleNow = style;
+  base.getMaplibreMap()?.setStyle(style);
+}
 export const flyTo = (p, zoom) => map.flyTo([p.lat, p.lng], zoom ?? Math.max(map.getZoom(), 16), { duration: 0.7 });
 export const invalidate = () => map?.invalidateSize();
 
