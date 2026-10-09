@@ -716,7 +716,7 @@ begin
     'url', '/?news=' || a.id,
     'announcementId', a.id)
   from public.profiles p
-  where p.access = 'approved' and not p.banned and p.id <> me.id;
+  where p.access = 'approved' and not p.banned; -- inkl. Absender: so siehst du selbst, wie sie ankommt
   get diagnostics n = row_count;
   update public.announcements set recipients = n where id = a.id;
   return jsonb_build_object('id', a.id, 'recipients', n);

@@ -327,9 +327,9 @@ test('Mitteilungen: nur Admins senden, alle Freigeschalteten bekommen sie', asyn
   await assert.rejects(() => rpc(db, a, 'admin_send_announcement', { p_title: 'x', p_body: 'y' }), /Nur für Admins/);
   await assert.rejects(() => rpc(db, admin, 'admin_send_announcement', { p_title: '', p_body: 'y' }), /Titel/);
   const res = await rpc(db, admin, 'admin_send_announcement', { p_title: 'Neue Funktion', p_body: 'Ab heute gibt es die Straßen-Info.' });
-  assert.equal(res.recipients, 2, 'an alle Freigeschalteten außer dem Absender');
+  assert.equal(res.recipients, 3, 'an alle Freigeschalteten inkl. Absender');
   const out = (await db.query(`select user_id, payload from public.outbox where kind = 'announcement'`)).rows;
-  assert.deepEqual(out.map((r) => r.user_id).sort(), [a, b].sort());
+  assert.deepEqual(out.map((r) => r.user_id).sort(), [admin, a, b].sort());
   assert.equal(out[0].payload.title, '📣 Neue Funktion');
   assert.equal(out[0].payload.url, `/?news=${res.id}`);
   assert.ok(out[0].request_id !== null || true);

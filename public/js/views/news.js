@@ -59,10 +59,10 @@ export function showAnnouncement() {
 /** Admin: Mitteilung an alle schreiben */
 export function openCompose() {
   if (!state.user?.isAdmin) return;
-  const n = state.user.memberCount ? Math.max(0, state.user.memberCount - 1) : null;
+  const n = state.user.memberCount || null;
   openSheet({
     title: 'Mitteilung senden',
-    body: `<p class="muted" style="margin:0 0 14px">Geht als Push-Nachricht an alle freigeschalteten Nutzer${n != null ? ` (${n})` : ''} und erscheint in der App unter „Mitteilungen“. Bitte nur Infos zur App, keine Werbung.</p>
+    body: `<p class="muted" style="margin:0 0 14px">Geht als Push-Nachricht an alle freigeschalteten Nutzer${n != null ? ` (${n}, du selbst eingeschlossen)` : ''} und erscheint in der App unter „Mitteilungen“. Bitte nur Infos zur App, keine Werbung.</p>
       <label class="field"><span>Titel</span><input name="title" maxlength="80" placeholder="z. B. Neue Funktion" /></label>
       <label class="field"><span>Text <small class="muted" data-count>0/1000</small></span><textarea name="body" rows="5" maxlength="1000" placeholder="Was möchtest du allen sagen?"></textarea></label>
       <button class="btn primary block" data-send>${icon('send')} An alle senden</button>`,
